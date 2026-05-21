@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Candado Matemático de Viewport */
+        *, *::before, *::after { box-sizing: border-box; }
+
         :root {
             --azul-metal: #32527B;
             --amarillo-oro: #FDCC0D;
@@ -21,14 +24,15 @@
         }
 
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
+            margin: 0; padding: 0; width: 100%; 
+            height: 100dvh; /* Dynamic Viewport: Mata el bug de iOS Safari */
             background-color: var(--black-core);
             font-family: 'Rajdhani', sans-serif;
             color: #FFFFFF; overflow: hidden;
         }
 
         #map {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
             background: var(--black-core);
         }
 
@@ -39,7 +43,7 @@
 
         /* HUD LAYOUT */
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100dvh;
             z-index: 10; pointer-events: none;
             display: flex; flex-direction: column; justify-content: space-between;
         }
@@ -49,25 +53,27 @@
             background: rgba(26, 26, 26, 0.85);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border-bottom: 2px solid var(--azul-metal);
-            padding: 15px 20px;
+            padding: 12px 20px;
             display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 0 20px rgba(50, 82, 123, 0.4);
+            flex-shrink: 0; /* Evita que el NAV se aplaste */
         }
 
         .sgx-logo {
             font-family: 'Orbitron', sans-serif;
             font-size: clamp(1rem, 2.5vw, 1.8rem);
             color: var(--amarillo-oro); text-transform: uppercase; font-weight: 700; margin: 0;
+            white-space: nowrap;
         }
         .sgx-logo span { color: var(--neon-cyan); font-size: 0.55em; display: block; letter-spacing: 2px;}
 
-        .nav-buttons { display: flex; gap: 10px; }
+        .nav-buttons { display: flex; gap: 8px; }
 
         .sgx-btn {
             background: rgba(253, 204, 13, 0.05); color: var(--amarillo-oro);
             border: 1px solid var(--amarillo-oro); font-family: 'Orbitron', sans-serif;
             font-size: clamp(0.7rem, 1.5vw, 0.9rem); text-transform: uppercase;
-            padding: 8px 15px; cursor: pointer; transition: all 0.3s ease;
+            padding: 8px 12px; cursor: pointer; transition: all 0.3s ease;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
             pointer-events: auto; white-space: nowrap;
         }
@@ -78,7 +84,9 @@
         }
 
         #panel-container-wrapper {
-            display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: flex-end; 
+            height: 100%; pointer-events: none; overflow: hidden;
+            padding: 10px;
         }
 
         .content-panel {
@@ -86,9 +94,9 @@
             background: rgba(26, 26, 26, 0.95);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--azul-metal);
-            margin: 20px; padding: 25px;
+            padding: 20px;
             width: clamp(320px, 90%, 550px);
-            max-height: 70vh; overflow-y: auto;
+            max-height: 100%; overflow-y: auto;
             clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
             display: none; flex-direction: column; gap: 15px;
             box-shadow: 0 0 35px rgba(0,0,0,0.7);
@@ -99,11 +107,11 @@
         h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); margin: 0 0 10px 0; font-size: 1.3rem; text-transform: uppercase; border-bottom: 1px dashed var(--azul-metal); padding-bottom: 5px;}
         h3 { color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.05rem; text-transform: uppercase;}
         p, li { margin: 0 0 8px 0; color: #D1D5DB; line-height: 1.4; font-size: 0.95rem; }
-        ul { padding-left: 20px; }
+        ul { padding-left: 20px; margin: 0; }
 
         .data-block {
             background: rgba(50, 82, 123, 0.12); border-left: 3px solid var(--amarillo-oro);
-            padding: 15px; margin-bottom: 12px; position: relative;
+            padding: 12px; margin-bottom: 10px; position: relative;
         }
         
         .poi-item { cursor: pointer; transition: transform 0.2s; }
@@ -125,52 +133,49 @@
 
         /* SPONSOR LOGO GALLERY GRID */
         .sponsor-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 15px; margin-top: 10px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px; margin-top: 10px;
         }
 
         .sponsor-card {
             background: var(--black-core); border: 1px solid rgba(50, 82, 123, 0.5);
-            padding: 10px; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; min-height: 90px; text-decoration: none;
+            padding: 8px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 80px; text-decoration: none;
             transition: all 0.3s ease;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
         }
 
-        .sponsor-card:hover {
-            border-color: var(--amarillo-oro); box-shadow: 0 0 12px rgba(253, 204, 13, 0.3);
-            transform: scale(1.03);
-        }
-
-        .sponsor-card img {
-            width: 100%; height: auto; max-height: 55px; object-fit: contain;
-            filter: grayscale(100%) brightness(0.9); transition: filter 0.3s;
-        }
-
+        .sponsor-card:hover { border-color: var(--amarillo-oro); box-shadow: 0 0 12px rgba(253, 204, 13, 0.3); transform: scale(1.03); }
+        .sponsor-card img { width: 100%; height: auto; max-height: 45px; object-fit: contain; filter: grayscale(100%) brightness(0.9); transition: filter 0.3s; }
         .sponsor-card:hover img { filter: grayscale(0%) brightness(1); }
-        .sponsor-card span { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-top: 5px; text-align: center;}
+        .sponsor-card span { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-top: 5px; text-align: center;}
 
         /* POPUP */
-        .leaflet-popup-content-wrapper {
-            background: var(--metal-dark); color: #FFF; border: 1px solid var(--amarillo-oro);
-            border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
-        }
+        .leaflet-popup-content-wrapper { background: var(--metal-dark); color: #FFF; border: 1px solid var(--amarillo-oro); border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
         .leaflet-popup-tip { background: var(--amarillo-oro); }
         .leaflet-popup-content { margin: 15px; font-family: 'Rajdhani', sans-serif; }
 
         @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+        /* ================= MOBILE OPTIMIZATION ================= */
         @media (max-width: 768px) {
-            .sgx-nav { flex-direction: column; align-items: flex-start; padding: 10px; gap: 12px; }
+            .sgx-nav { flex-direction: column; align-items: flex-start; padding: 10px; gap: 8px; }
             .nav-buttons { width: 100%; overflow-x: auto; padding-bottom: 5px; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+            #panel-container-wrapper { padding: 0; justify-content: flex-end; }
             .content-panel {
-                width: 100%; margin: 0; max-height: 48vh;
+                width: 100%; margin: 0; 
+                max-height: 45dvh; /* Estricto a menos de la mitad de la pantalla */
                 border-left: none; border-right: none; border-bottom: none; border-top: 2px solid var(--azul-metal);
                 clip-path: polygon(0 20px, 20px 0, 100% 0, 100% 100%, 0 100%);
                 animation: slideUp 0.3s ease-out;
             }
         }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--azul-metal); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -204,8 +209,8 @@
                     <p>Apertura oficial de exhibidores y quioscos gastronómicos. Presentaciones folclóricas continuas en tarima con percusión y música autóctona.</p>
                 </div>
                 <div class="data-block">
-                    <h3>Sábado 13 - Batalla de Trova & Ritmo</h3>
-                    <p><strong>Ruta Cultural:</strong> Expresiones de Bomba y Plena en vivo.<br><strong>Pico a Pico:</strong> Competencia de trovadores de alta resolución con rimas obligatorias enfocadas en la historia del mango.</p>
+                    <h3>Sábado 13 - Batalla de Trova</h3>
+                    <p><strong>Ruta Cultural:</strong> Expresiones de Bomba y Plena en vivo.<br><strong>Pico a Pico:</strong> Competencia de trovadores con rimas obligatorias enfocadas en la historia del mango.</p>
                 </div>
                 <div class="data-block">
                     <h3>Domingo 14 - El Mango de Oro</h3>
@@ -219,7 +224,6 @@
                 
                 <div class="data-block">
                     <h3>Promoción y Media Partners</h3>
-                    <p>Campaña de difusión masiva coordinada a través de las frecuencias matrices del oeste:</p>
                     <ul>
                         <li>Radio Amor 90.9 FM (Cobertura radial en vivo)</li>
                         <li>Noticias de Mayagüez (Despliegue de prensa digital)</li>
@@ -227,83 +231,72 @@
                 </div>
 
                 <div class="data-block" style="border-left-color: var(--neon-cyan);">
-                    <h3>Logística Central de Producción</h3>
-                    <p><strong>Compañía Ejecutora:</strong> Matos Event's</p>
-                    <p><strong>Directora de Operaciones:</strong> Jeanette Matos</p>
-                    <p><strong>Línea Directa:</strong> 787-206-6661</p>
-                    <p><strong>E-Mail:</strong> eventsmatos@gmail.com</p>
+                    <h3>Logística Central</h3>
+                    <p><strong>Productora:</strong> Matos Event's<br><strong>Directora:</strong> Jeanette Matos<br><strong>Tel:</strong> 787-206-6661<br><strong>Email:</strong> eventsmatos@gmail.com</p>
                 </div>
             </div>
 
             <div id="panel-sponsors" class="content-panel">
-                <h2>Estructura de Patrocinio B2B</h2>
-                <p>Paquetes de inversión táctica diseñados para traccionar conversión de marca.</p>
+                <h2>Estructura B2B</h2>
                 
                 <div class="data-block">
                     <h3>Semilla de Mango // $1,500</h3>
-                    <p>Asignación física de espacio 10x10 para activación o quiosco comercial. Presencia de logo en la web oficial, mención de honor en la tarima principal y banners grupales de alto formato. Inyección de comerciales de video nativos durante las pausas de transmisión digital.</p>
+                    <p>Espacio 10x10 para activación. Logo en web oficial, mención en tarima y banners grupales. Anuncios de video en pausas de transmisión.</p>
                 </div>
 
                 <div class="data-block">
                     <h3>Amigos del Mango // $500</h3>
-                    <p>Espacio compacto optimizado para mesa informativa. Mención de marca en canales de redes sociales y despliegue del logo corporativo fijo en las transmisiones digitales del evento durante los tres días.</p>
+                    <p>Espacio para mesa informativa. Mención en redes sociales y logo en las transmisiones digitales del evento.</p>
                 </div>
 
-                <h2>Showcase de Marcas Socias</h2>
+                <h2>Marcas Socias</h2>
                 <div class="sponsor-grid" id="sponsor-gallery-dom"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // =========================================================================
-        // CONFIGURACIÓN CENTRALIZADA DE AUSPICIADORES (TU BACKEND MODULAR)
-        // Cambia los links e imágenes aquí y la interfaz se redibuja automáticamente
-        // =========================================================================
+        // BACKEND SIMULADO DE AUSPICIOS
         const sponsorDatabase = [
             { name: "Spatialgineers", logo: "https://static.wixstatic.com/media/fe81a7_fe81a7_fe81a7~mv2.png", url: "https://www.spatialgineers.com", tier: "Semilla" },
             { name: "Matos Events", logo: "https://via.placeholder.com/120x60/1a1a1a/fdcc0d?text=MATOS", url: "mailto:eventsmatos@gmail.com", tier: "Semilla" },
-            { name: "Radio Amor", logo: "https://via.placeholder.com/120x60/1a1a1a/00ffff?text=AMOR+90.9", url: "https://google.com", tier: "Media Partner" },
+            { name: "Radio Amor", logo: "https://via.placeholder.com/120x60/1a1a1a/00ffff?text=AMOR+90.9", url: "https://google.com", tier: "Media" },
             { name: "Mayagüez Sabe a Mangó", logo: "https://static.wixstatic.com/media/fe81a7_a9ac4a22b6634a81bde864519be8305f~mv2.png", url: "https://www.mayaguezsabeamango.com", tier: "Amigos" }
         ];
 
-        // DATA DE NODOS URBANOS CORREGIDOS (Extremos: Teatro Yagüez a La Jibarita)
         const eventData = {
             center: [18.2012, -67.1396], // Plaza Colón
-            bounds: [[18.1980, -67.1435], [18.2040, -67.1350]], // Extensión completa del Casco Urbano
+            // SGX HACK: Expandí radicalmente el 'bounds' de colisión. 
+            // Te deja explorar casi todo Mayagüez antes de rebotar.
+            bounds: [[18.1800, -67.1650], [18.2200, -67.1150]], 
             pois: [
-                { id: "plaza", title: "Plaza Colón (Epicentro)", desc: "Quioscos culinarios principales, competencias de Mango de Oro, Dominó y Bingo.", coords: [18.2012, -67.1396], color: "#FDCC0D" },
-                { id: "teatro", title: "Teatro Yagüez (Límite Oeste)", desc: "Estación de control oeste. Referencia histórica y pilar de la infraestructura cultural.", coords: [18.2010, -67.1415], color: "#00FFFF" },
-                { id: "jibarita", title: "La Jibarita (Límite Este)", desc: "Punto matriz este de la ruta urbana. Activación periférica del festival.", coords: [18.2018, -67.1368], color: "#FFAA00" },
-                { id: "tarima", title: "Tarima Central Cultural", desc: "Sede de los shows de Bomba, Plena y la final del Pico a Pico de Trovadores.", coords: [18.2014, -67.1396], color: "#FF0055" }
+                { id: "plaza", title: "Plaza Colón", desc: "Quioscos culinarios y competencia Mango de Oro.", coords: [18.2012, -67.1396], color: "#FDCC0D" },
+                { id: "teatro", title: "Teatro Yagüez", desc: "Referencia histórica y punto oeste.", coords: [18.2010, -67.1415], color: "#00FFFF" },
+                { id: "jibarita", title: "La Jibarita", desc: "Punto matriz este de la ruta urbana.", coords: [18.2018, -67.1368], color: "#FFAA00" },
+                { id: "tarima", title: "Tarima Central", desc: "Bomba, Plena y Pico a Pico.", coords: [18.2014, -67.1396], color: "#FF0055" }
             ]
         };
 
-        // Inicializar Motor Geográfico Leaflet
         const map = L.map('map', {
             zoomControl: false,
             maxBounds: eventData.bounds,
-            maxBoundsViscosity: 1.0, // Bloqueo rígido del viewport en el casco urbano
-            minZoom: 16
+            maxBoundsViscosity: 0.4, // Rebote elástico, no una pared dura
+            minZoom: 14, // Te deja hacer zoom out lejísimos
+            maxZoom: 21
         }).setView(eventData.center, 18);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: 'SGX Metric Engine'
         }).addTo(map);
 
-        // Vector de demarcación táctica de la zona activa del festival
         L.polygon([
-            [18.2022, -67.1420],
-            [18.2025, -67.1360],
-            [18.2002, -67.1360],
-            [18.2000, -67.1420]
+            [18.2022, -67.1420], [18.2025, -67.1360],
+            [18.2002, -67.1360], [18.2000, -67.1420]
         ], { color: '#32527B', weight: 1, fillColor: '#32527B', fillOpacity: 0.15 }).addTo(map);
 
-        // Compilar Nodos POI en el Mapa y Menú
         const listContainer = document.getElementById('poi-list');
 
         eventData.pois.forEach(poi => {
-            // Inyectar en el Panel de Control
             const div = document.createElement('div');
             div.className = 'data-block poi-item';
             div.style.borderLeftColor = poi.color;
@@ -311,12 +304,11 @@
                 <h3 style="color: ${poi.color};">${poi.title} <i class="fa-solid fa-crosshairs" style="float:right;"></i></h3>
                 <p style="margin:0 0 5px 0;">${poi.desc}</p>
                 <a class="gmaps-trigger" href="https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}" target="_blank">
-                    <i class="fa-solid fa-diamond-turn-right"></i> Usar GPS de Google Maps
+                    <i class="fa-solid fa-diamond-turn-right"></i> Ir vía GPS
                 </a>
             `;
             listContainer.appendChild(div);
 
-            // Inyectar Marcador Físico
             const marker = L.circleMarker(poi.coords, {
                 radius: 9, fillColor: poi.color, color: "#FFF", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
@@ -331,8 +323,9 @@
 
             const flyToLocation = () => {
                 const isMobile = window.innerWidth <= 768;
-                const targetLat = isMobile ? poi.coords[0] - 0.0004 : poi.coords[0];
-                map.flyTo([targetLat, poi.coords[1]], 18.5, { duration: 1.2 });
+                // Offset de cámara corregido para la nueva altura del bottom-sheet
+                const targetLat = isMobile ? poi.coords[0] - 0.0007 : poi.coords[0];
+                map.flyTo([targetLat, poi.coords[1]], 18, { duration: 1.2 });
                 setTimeout(() => marker.openPopup(), 1200);
             };
 
@@ -340,21 +333,16 @@
             marker.on('click', flyToLocation);
         });
 
-        // Compilar Galería Dinámica de Auspicios
         const galleryContainer = document.getElementById('sponsor-gallery-dom');
         sponsorDatabase.forEach(sp => {
             const card = document.createElement('a');
             card.className = 'sponsor-card';
             card.href = sp.url;
             card.target = '_blank';
-            card.innerHTML = `
-                <img src="${sp.logo}" alt="${sp.name}">
-                <span>${sp.tier}</span>
-            `;
+            card.innerHTML = `<img src="${sp.logo}" alt="${sp.name}"><span>${sp.tier}</span>`;
             galleryContainer.appendChild(card);
         });
 
-        // Pipeline de Control de Pestañas (Tabs)
         function switchTab(tabId) {
             document.querySelectorAll('.sgx-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.content-panel').forEach(panel => panel.classList.remove('active'));
@@ -364,8 +352,8 @@
 
             if(tabId !== 'mapa') {
                 const isMobile = window.innerWidth <= 768;
-                const centerLat = isMobile ? eventData.center[0] - 0.0006 : eventData.center[0];
-                map.flyTo([centerLat, eventData.center[1]], 17, { duration: 1.5 });
+                const centerLat = isMobile ? eventData.center[0] - 0.001 : eventData.center[0];
+                map.flyTo([centerLat, eventData.center[1]], 16.5, { duration: 1.5 });
                 map.closePopup();
             }
         }
