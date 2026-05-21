@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX // MANGO FEST 2026 - URBAN EDITION</title>
+    <title>SGX // MANGO FEST 2026 - URBAN CORE ENGINE</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* SGX TACTICAL BRAND GUIDE */
         :root {
             --azul-metal: #32527B;
             --amarillo-oro: #FDCC0D;
@@ -25,29 +24,24 @@
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: var(--black-core);
             font-family: 'Rajdhani', sans-serif;
-            color: #FFFFFF;
-            overflow: hidden;
+            color: #FFFFFF; overflow: hidden;
         }
 
-        /* CAPA 0: MOTOR ESPACIAL */
         #map {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
             background: var(--black-core);
         }
 
-        /* SGX HACK: Forzar Dark Mode Táctico en mapas claros open-source */
-        .leaflet-layer,
-        .leaflet-control-zoom-in,
-        .leaflet-control-zoom-out,
-        .leaflet-control-attribution {
+        /* Dark Mode CSS Filter Hack */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(120%);
         }
 
-        /* CAPA 1: HUD INTERFAZ SGX */
+        /* HUD LAYOUT */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 10; pointer-events: none;
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
 
         .sgx-nav {
@@ -62,13 +56,12 @@
 
         .sgx-logo {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
-            color: var(--amarillo-oro);
-            text-transform: uppercase; font-weight: 700; margin: 0;
+            font-size: clamp(1rem, 2.5vw, 1.8rem);
+            color: var(--amarillo-oro); text-transform: uppercase; font-weight: 700; margin: 0;
         }
-        .sgx-logo span { color: var(--neon-cyan); font-size: 0.6em; display: block; letter-spacing: 2px;}
+        .sgx-logo span { color: var(--neon-cyan); font-size: 0.55em; display: block; letter-spacing: 2px;}
 
-        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; gap: 10px; }
 
         .sgx-btn {
             background: rgba(253, 204, 13, 0.05); color: var(--amarillo-oro);
@@ -76,7 +69,7 @@
             font-size: clamp(0.7rem, 1.5vw, 0.9rem); text-transform: uppercase;
             padding: 8px 15px; cursor: pointer; transition: all 0.3s ease;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-            pointer-events: auto;
+            pointer-events: auto; white-space: nowrap;
         }
 
         .sgx-btn:hover, .sgx-btn.active {
@@ -84,48 +77,100 @@
             box-shadow: 0 0 15px rgba(253, 204, 13, 0.5);
         }
 
-        /* PANELES DE DATOS (45° CUTS) */
+        #panel-container-wrapper {
+            display: flex; flex-direction: column; justify-content: flex-end; height: 100%; pointer-events: none;
+        }
+
         .content-panel {
             pointer-events: auto;
-            background: rgba(26, 26, 26, 0.90);
+            background: rgba(26, 26, 26, 0.95);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border: 1px solid var(--azul-metal);
             margin: 20px; padding: 25px;
-            width: clamp(320px, 90%, 500px);
-            max-height: 75vh; overflow-y: auto;
+            width: clamp(320px, 90%, 550px);
+            max-height: 70vh; overflow-y: auto;
             clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
             display: none; flex-direction: column; gap: 15px;
+            box-shadow: 0 0 35px rgba(0,0,0,0.7);
         }
 
         .content-panel.active { display: flex; animation: slideIn 0.3s ease-out; }
 
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); margin: 0 0 10px 0; font-size: 1.4rem; text-transform: uppercase; border-bottom: 1px dashed var(--azul-metal); padding-bottom: 5px;}
-        h3 { color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase;}
-        p, li { margin: 0 0 10px 0; color: #D1D5DB; line-height: 1.5; font-size: 0.95rem; }
+        h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); margin: 0 0 10px 0; font-size: 1.3rem; text-transform: uppercase; border-bottom: 1px dashed var(--azul-metal); padding-bottom: 5px;}
+        h3 { color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.05rem; text-transform: uppercase;}
+        p, li { margin: 0 0 8px 0; color: #D1D5DB; line-height: 1.4; font-size: 0.95rem; }
         ul { padding-left: 20px; }
 
         .data-block {
-            background: rgba(50, 82, 123, 0.15); border-left: 3px solid var(--amarillo-oro);
-            padding: 15px; margin-bottom: 10px; transition: transform 0.2s;
+            background: rgba(50, 82, 123, 0.12); border-left: 3px solid var(--amarillo-oro);
+            padding: 15px; margin-bottom: 12px; position: relative;
         }
         
-        .poi-item { cursor: pointer; }
-        .poi-item:hover { transform: translateX(5px); border-left-color: var(--neon-cyan); background: rgba(50, 82, 123, 0.3); }
+        .poi-item { cursor: pointer; transition: transform 0.2s; }
+        .poi-item:hover { transform: translateX(5px); border-left-color: var(--neon-cyan); background: rgba(50, 82, 123, 0.22); }
 
-        /* CUSTOM LEAFLET POPUP */
+        /* GOOGLE MAPS ROUTING BUTTON */
+        .gmaps-trigger {
+            display: inline-flex; align-items: center; gap: 8px;
+            margin-top: 10px; background: transparent; color: var(--neon-cyan);
+            border: 1px solid var(--neon-cyan); padding: 6px 12px;
+            font-family: 'Orbitron', sans-serif; font-size: 0.75rem; text-decoration: none;
+            cursor: pointer; transition: all 0.3s ease;
+            clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+        }
+        .gmaps-trigger:hover {
+            background: var(--neon-cyan); color: var(--black-core);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* SPONSOR LOGO GALLERY GRID */
+        .sponsor-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 15px; margin-top: 10px;
+        }
+
+        .sponsor-card {
+            background: var(--black-core); border: 1px solid rgba(50, 82, 123, 0.5);
+            padding: 10px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 90px; text-decoration: none;
+            transition: all 0.3s ease;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+
+        .sponsor-card:hover {
+            border-color: var(--amarillo-oro); box-shadow: 0 0 12px rgba(253, 204, 13, 0.3);
+            transform: scale(1.03);
+        }
+
+        .sponsor-card img {
+            width: 100%; height: auto; max-height: 55px; object-fit: contain;
+            filter: grayscale(100%) brightness(0.9); transition: filter 0.3s;
+        }
+
+        .sponsor-card:hover img { filter: grayscale(0%) brightness(1); }
+        .sponsor-card span { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-top: 5px; text-align: center;}
+
+        /* POPUP */
         .leaflet-popup-content-wrapper {
             background: var(--metal-dark); color: #FFF; border: 1px solid var(--amarillo-oro);
             border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
         }
         .leaflet-popup-tip { background: var(--amarillo-oro); }
         .leaflet-popup-content { margin: 15px; font-family: 'Rajdhani', sans-serif; }
-        .leaflet-popup-content h3 { font-family: 'Orbitron', sans-serif; color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.1rem;}
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--black-core); }
-        ::-webkit-scrollbar-thumb { background: var(--azul-metal); }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .sgx-nav { flex-direction: column; align-items: flex-start; padding: 10px; gap: 12px; }
+            .nav-buttons { width: 100%; overflow-x: auto; padding-bottom: 5px; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+            .content-panel {
+                width: 100%; margin: 0; max-height: 48vh;
+                border-left: none; border-right: none; border-bottom: none; border-top: 2px solid var(--azul-metal);
+                clip-path: polygon(0 20px, 20px 0, 100% 0, 100% 100%, 0 100%);
+                animation: slideUp 0.3s ease-out;
+            }
+        }
     </style>
 </head>
 <body>
@@ -134,179 +179,193 @@
 
     <div id="ui-layer">
         <nav class="sgx-nav">
-            <h1 class="sgx-logo">MANGO FEST 2026<span>URBAN EDITION // PLAZA COLÓN, MAYAGÜEZ</span></h1>
+            <h1 class="sgx-logo">Mango Fest 2026<span>Urban Edition // Casco Urbano</span></h1>
             <div class="nav-buttons">
-                <button class="sgx-btn active" onclick="switchTab('mapa')"><i class="fa-solid fa-map-location-dot"></i> ESPACIO</button>
+                <button class="sgx-btn active" onclick="switchTab('mapa')"><i class="fa-solid fa-map-location-dot"></i> MAPA</button>
                 <button class="sgx-btn" onclick="switchTab('agenda')"><i class="fa-solid fa-calendar-days"></i> EVENTOS</button>
-                <button class="sgx-btn" onclick="switchTab('info')"><i class="fa-solid fa-circle-info"></i> INFO & PROD</button>
+                <button class="sgx-btn" onclick="switchTab('info')"><i class="fa-solid fa-circle-info"></i> INFO</button>
                 <button class="sgx-btn" onclick="switchTab('sponsors')"><i class="fa-solid fa-handshake"></i> AUSPICIOS</button>
             </div>
         </nav>
 
-        <div id="panel-mapa" class="content-panel active">
-            <h2>Mapeo Espacial</h2>
-            <p>Selecciona un nodo para mover la cámara y ver detalles del sector.</p>
-            <div id="poi-list"></div>
-        </div>
-
-        <div id="panel-agenda" class="content-panel">
-            <h2>Itinerario Oficial</h2>
-            <p style="color: var(--amarillo-oro); font-weight: bold;">Fechas: 12 al 14 de junio de 2026</p>
-            
-            <div class="data-block">
-                <h3>Ruta Cultural (Tarima)</h3>
-                <ul>
-                    <li>Presentaciones de Bomba, Plena y Tambores.</li>
-                    <li>Dinámicas de trovadores en "Pico a Pico" con temática alusiva al mango.</li>
-                </ul>
-            </div>
-            
-            <div class="data-block">
-                <h3>Gastronomía & Competencias</h3>
-                <ul>
-                    <li>Competencias culinarias destacando la creatividad con el mango (postres, bebidas, comidas, bizcochos).</li>
-                    <li>Entrega del galardón especial <strong>"El Mango de Oro"</strong> a expositores destacados.</li>
-                </ul>
+        <div id="panel-container-wrapper">
+            <div id="panel-mapa" class="content-panel active">
+                <h2>Ubicaciones del Casco Urbano</h2>
+                <p>Navega los puntos de interés. Cada nodo incluye enlace GPS directo a Google Maps.</p>
+                <div id="poi-list"></div>
             </div>
 
-            <div class="data-block">
-                <h3>Tradición y Juegos</h3>
-                <ul>
-                    <li>Áreas recreativas tradicionales con estaciones activas de Dominó y Bingo para retención de audiencia.</li>
-                </ul>
-            </div>
-        </div>
-
-        <div id="panel-info" class="content-panel">
-            <h2>El Concepto</h2>
-            <p>El <strong>Festival del Mango 2026 - Urban Edition</strong> propone una innovadora transformación del tradicional festival, trasladándolo a un concepto urbano en la Plaza Colón de Mayagüez.</p>
-            <p>Durante 3 días, la plaza se convierte en un ecosistema vibrante que conecta al público con la esencia de nuestra identidad cultural de forma interactiva y educativa.</p>
-            
-            <div class="data-block" style="border-left-color: var(--neon-cyan);">
-                <h3 style="color: var(--neon-cyan);">Producción y Contacto</h3>
-                <p><strong>Productor:</strong> Matos Event's</p>
-                <p><strong>Contacto:</strong> Jeanette Matos</p>
-                <p><strong>Teléfono:</strong> 787-206-6661</p>
-                <p><strong>Email:</strong> eventsmatos@gmail.com</p>
-            </div>
-        </div>
-
-        <div id="panel-sponsors" class="content-panel">
-            <h2>Estructura de Inversión</h2>
-            
-            <div class="data-block">
-                <h3>Tier 1: Semilla de Mango - $1,500</h3>
-                <ul>
-                    <li>Espacio 10x10 para carpa, kiosko o activación física.</li>
-                    <li>Logo en redes sociales y página oficial del evento.</li>
-                    <li>Mención oficial en tarima (una vez durante el evento).</li>
-                    <li>Logo en banner grupal de auspiciadores.</li>
-                    <li>Logo en transmisiones y anuncio de video en pausas.</li>
-                </ul>
+            <div id="panel-agenda" class="content-panel">
+                <h2>Cronograma Estructurado</h2>
+                <p style="color: var(--amarillo-oro); font-weight: bold; margin-top:-5px;">12 al 14 de Junio de 2026 // Plaza Colón</p>
+                
+                <div class="data-block">
+                    <h3>Viernes 12 - Apertura Urbana</h3>
+                    <p>Apertura oficial de exhibidores y quioscos gastronómicos. Presentaciones folclóricas continuas en tarima con percusión y música autóctona.</p>
+                </div>
+                <div class="data-block">
+                    <h3>Sábado 13 - Batalla de Trova & Ritmo</h3>
+                    <p><strong>Ruta Cultural:</strong> Expresiones de Bomba y Plena en vivo.<br><strong>Pico a Pico:</strong> Competencia de trovadores de alta resolución con rimas obligatorias enfocadas en la historia del mango.</p>
+                </div>
+                <div class="data-block">
+                    <h3>Domingo 14 - El Mango de Oro</h3>
+                    <p>Evaluación del jurado experto. Otorgación del gran galardón <strong>"El Mango de Oro"</strong> a la innovación culinaria. Cierre con desfile de comparsas urbanas.</p>
+                </div>
             </div>
 
-            <div class="data-block">
-                <h3>Tier 2: Amigos del Mango - $500</h3>
-                <ul>
-                    <li>Espacio asignado para mesa informativa (sin carpa grande).</li>
-                    <li>Mención en redes sociales como auspiciador.</li>
-                    <li>Logo en transmisión durante los tres días (solo en transmisiones).</li>
-                </ul>
+            <div id="panel-info" class="content-panel">
+                <h2>Estrategia Operativa</h2>
+                <p>El festival toma el control de la Plaza Colón de Mayagüez integrando estaciones interactivas de Dominó y Bingo tradicional para generar dinámicas de retención masiva y engagement intergeneracional.</p>
+                
+                <div class="data-block">
+                    <h3>Promoción y Media Partners</h3>
+                    <p>Campaña de difusión masiva coordinada a través de las frecuencias matrices del oeste:</p>
+                    <ul>
+                        <li>Radio Amor 90.9 FM (Cobertura radial en vivo)</li>
+                        <li>Noticias de Mayagüez (Despliegue de prensa digital)</li>
+                    </ul>
+                </div>
+
+                <div class="data-block" style="border-left-color: var(--neon-cyan);">
+                    <h3>Logística Central de Producción</h3>
+                    <p><strong>Compañía Ejecutora:</strong> Matos Event's</p>
+                    <p><strong>Directora de Operaciones:</strong> Jeanette Matos</p>
+                    <p><strong>Línea Directa:</strong> 787-206-6661</p>
+                    <p><strong>E-Mail:</strong> eventsmatos@gmail.com</p>
+                </div>
+            </div>
+
+            <div id="panel-sponsors" class="content-panel">
+                <h2>Estructura de Patrocinio B2B</h2>
+                <p>Paquetes de inversión táctica diseñados para traccionar conversión de marca.</p>
+                
+                <div class="data-block">
+                    <h3>Semilla de Mango // $1,500</h3>
+                    <p>Asignación física de espacio 10x10 para activación o quiosco comercial. Presencia de logo en la web oficial, mención de honor en la tarima principal y banners grupales de alto formato. Inyección de comerciales de video nativos durante las pausas de transmisión digital.</p>
+                </div>
+
+                <div class="data-block">
+                    <h3>Amigos del Mango // $500</h3>
+                    <p>Espacio compacto optimizado para mesa informativa. Mención de marca en canales de redes sociales y despliegue del logo corporativo fijo en las transmisiones digitales del evento durante los tres días.</p>
+                </div>
+
+                <h2>Showcase de Marcas Socias</h2>
+                <div class="sponsor-grid" id="sponsor-gallery-dom"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // Data Espacial y Geometría
+        // =========================================================================
+        // CONFIGURACIÓN CENTRALIZADA DE AUSPICIADORES (TU BACKEND MODULAR)
+        // Cambia los links e imágenes aquí y la interfaz se redibuja automáticamente
+        // =========================================================================
+        const sponsorDatabase = [
+            { name: "Spatialgineers", logo: "https://static.wixstatic.com/media/fe81a7_fe81a7_fe81a7~mv2.png", url: "https://www.spatialgineers.com", tier: "Semilla" },
+            { name: "Matos Events", logo: "https://via.placeholder.com/120x60/1a1a1a/fdcc0d?text=MATOS", url: "mailto:eventsmatos@gmail.com", tier: "Semilla" },
+            { name: "Radio Amor", logo: "https://via.placeholder.com/120x60/1a1a1a/00ffff?text=AMOR+90.9", url: "https://google.com", tier: "Media Partner" },
+            { name: "Mayagüez Sabe a Mangó", logo: "https://static.wixstatic.com/media/fe81a7_a9ac4a22b6634a81bde864519be8305f~mv2.png", url: "https://www.mayaguezsabeamango.com", tier: "Amigos" }
+        ];
+
+        // DATA DE NODOS URBANOS CORREGIDOS (Extremos: Teatro Yagüez a La Jibarita)
         const eventData = {
-            center: [18.2012, -67.1396], // Plaza Colón, Mayagüez
-            bounds: [[18.2005, -67.1405], [18.2020, -67.1385]], // Límites del evento
+            center: [18.2012, -67.1396], // Plaza Colón
+            bounds: [[18.1980, -67.1435], [18.2040, -67.1350]], // Extensión completa del Casco Urbano
             pois: [
-                { id: "tarima", title: "Tarima Principal", desc: "Bomba, Plena y Pico a Pico de Trovadores.", coords: [18.2014, -67.1396], color: "#FDCC0D" },
-                { id: "gastro", title: "Kioskos Gastronómicos", desc: "Competencias culinarias y premio El Mango de Oro.", coords: [18.2011, -67.1399], color: "#00FFFF" },
-                { id: "juegos", title: "Zona Recreativa", desc: "Estaciones de Dominó y Bingo tradicional.", coords: [18.2009, -67.1393], color: "#FFAA00" },
-                { id: "vip", title: "Auspiciadores 10x10", desc: "Carpetas Tier 'Semilla de Mango' y mesas informativas.", coords: [18.2012, -67.1392], color: "#1A1A1A" }
+                { id: "plaza", title: "Plaza Colón (Epicentro)", desc: "Quioscos culinarios principales, competencias de Mango de Oro, Dominó y Bingo.", coords: [18.2012, -67.1396], color: "#FDCC0D" },
+                { id: "teatro", title: "Teatro Yagüez (Límite Oeste)", desc: "Estación de control oeste. Referencia histórica y pilar de la infraestructura cultural.", coords: [18.2010, -67.1415], color: "#00FFFF" },
+                { id: "jibarita", title: "La Jibarita (Límite Este)", desc: "Punto matriz este de la ruta urbana. Activación periférica del festival.", coords: [18.2018, -67.1368], color: "#FFAA00" },
+                { id: "tarima", title: "Tarima Central Cultural", desc: "Sede de los shows de Bomba, Plena y la final del Pico a Pico de Trovadores.", coords: [18.2014, -67.1396], color: "#FF0055" }
             ]
         };
 
-        // Inicializar Leaflet Map (Fricción 0, sin keys)
+        // Inicializar Motor Geográfico Leaflet
         const map = L.map('map', {
             zoomControl: false,
             maxBounds: eventData.bounds,
-            maxBoundsViscosity: 0.8, // Rebota suave si intentan salir de la plaza
-            minZoom: 17
-        }).setView(eventData.center, 19);
+            maxBoundsViscosity: 1.0, // Bloqueo rígido del viewport en el casco urbano
+            minZoom: 16
+        }).setView(eventData.center, 18);
 
-        // Inyectar base map open-source (CartoDB Positron - muy limpio, filtrado por CSS a dark mode)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: 'SGX Engine | Map data &copy; OpenStreetMap'
+            attribution: 'SGX Metric Engine'
         }).addTo(map);
 
-        // Dibujar Polígono de la Plaza Colón
-        const plazaPolygon = L.polygon([
-            [18.2016, -67.1402],
-            [18.2016, -67.1391],
-            [18.2007, -67.1391],
-            [18.2007, -67.1402]
-        ], {
-            color: '#00FFFF',
-            weight: 2,
-            fillColor: '#32527B',
-            fillOpacity: 0.4
-        }).addTo(map);
+        // Vector de demarcación táctica de la zona activa del festival
+        L.polygon([
+            [18.2022, -67.1420],
+            [18.2025, -67.1360],
+            [18.2002, -67.1360],
+            [18.2000, -67.1420]
+        ], { color: '#32527B', weight: 1, fillColor: '#32527B', fillOpacity: 0.15 }).addTo(map);
 
-        // Construir Pines Interactivos y Menú
+        // Compilar Nodos POI en el Mapa y Menú
         const listContainer = document.getElementById('poi-list');
 
         eventData.pois.forEach(poi => {
-            // 1. Crear Pin en el UI lateral
+            // Inyectar en el Panel de Control
             const div = document.createElement('div');
             div.className = 'data-block poi-item';
             div.style.borderLeftColor = poi.color;
             div.innerHTML = `
                 <h3 style="color: ${poi.color};">${poi.title} <i class="fa-solid fa-crosshairs" style="float:right;"></i></h3>
-                <p style="margin:0;">${poi.desc}</p>
+                <p style="margin:0 0 5px 0;">${poi.desc}</p>
+                <a class="gmaps-trigger" href="https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}" target="_blank">
+                    <i class="fa-solid fa-diamond-turn-right"></i> Usar GPS de Google Maps
+                </a>
             `;
             listContainer.appendChild(div);
 
-            // 2. Crear Pin Físico en el mapa (CircleMarker personalizado)
+            // Inyectar Marcador Físico
             const marker = L.circleMarker(poi.coords, {
-                radius: 8,
-                fillColor: poi.color,
-                color: "#FFF",
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9
+                radius: 9, fillColor: poi.color, color: "#FFF", weight: 2, opacity: 1, fillOpacity: 0.9
             }).addTo(map);
 
-            // 3. Vincular Popup HTML SGX style
             marker.bindPopup(`
-                <h3>${poi.title}</h3>
-                <p style="margin:0; font-size:0.9rem;">${poi.desc}</p>
+                <h3 style="color:${poi.color}; font-family:'Orbitron'; margin:0 0 5px 0;">${poi.title}</h3>
+                <p style="margin:0 0 10px 0; font-size:0.9rem; color:#DDD;">${poi.desc}</p>
+                <a class="gmaps-trigger" href="https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}" target="_blank" style="color:#FFF;">
+                    <i class="fa-solid fa-location-arrow"></i> Navegar
+                </a>
             `);
 
-            // 4. Lógica de vuelo de cámara al hacer clic
             const flyToLocation = () => {
-                map.flyTo(poi.coords, 20, { duration: 1.5, easeLinearity: 0.25 });
-                setTimeout(() => marker.openPopup(), 1500);
+                const isMobile = window.innerWidth <= 768;
+                const targetLat = isMobile ? poi.coords[0] - 0.0004 : poi.coords[0];
+                map.flyTo([targetLat, poi.coords[1]], 18.5, { duration: 1.2 });
+                setTimeout(() => marker.openPopup(), 1200);
             };
 
-            div.onclick = flyToLocation;
+            div.querySelector('h3').onclick = flyToLocation;
+            marker.on('click', flyToLocation);
         });
 
-        // Lógica de TABS (Routing sin recargar)
+        // Compilar Galería Dinámica de Auspicios
+        const galleryContainer = document.getElementById('sponsor-gallery-dom');
+        sponsorDatabase.forEach(sp => {
+            const card = document.createElement('a');
+            card.className = 'sponsor-card';
+            card.href = sp.url;
+            card.target = '_blank';
+            card.innerHTML = `
+                <img src="${sp.logo}" alt="${sp.name}">
+                <span>${sp.tier}</span>
+            `;
+            galleryContainer.appendChild(card);
+        });
+
+        // Pipeline de Control de Pestañas (Tabs)
         function switchTab(tabId) {
-            // Reset de UI
             document.querySelectorAll('.sgx-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.content-panel').forEach(panel => panel.classList.remove('active'));
             
-            // Activar selecciones
             event.currentTarget.classList.add('active');
             document.getElementById('panel-' + tabId).classList.add('active');
 
-            // Cinemática espacial: Si no están en el mapa, hacer un zoom-out dramático de dron
             if(tabId !== 'mapa') {
-                map.flyTo(eventData.center, 18.5, { duration: 2 });
+                const isMobile = window.innerWidth <= 768;
+                const centerLat = isMobile ? eventData.center[0] - 0.0006 : eventData.center[0];
+                map.flyTo([centerLat, eventData.center[1]], 17, { duration: 1.5 });
                 map.closePopup();
             }
         }
