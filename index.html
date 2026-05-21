@@ -3,142 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX Immersive Experience</title>
-    <!-- Core Engine: A-Frame -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <title>SGX // MANGO FEST 2026 - URBAN EDITION</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #050505; width: 100%; height: 100%; font-family: monospace; }
-        /* Posición global del botón VR por defecto en Quest */
-        .a-enter-vr { bottom: 20px !important; right: 20px !important; z-index: 10000; }
+        /* SGX TACTICAL BRAND GUIDE */
+        :root {
+            --azul-metal: #32527B;
+            --amarillo-oro: #FDCC0D;
+            --neon-cyan: #00FFFF;
+            --metal-dark: #1A1A1A;
+            --black-core: #050505;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--black-core);
+            font-family: 'Rajdhani', sans-serif;
+            color: #FFFFFF;
+            overflow: hidden;
+        }
+
+        /* CAPA 0: MOTOR ESPACIAL */
+        #map {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            background: var(--black-core);
+        }
+
+        /* SGX HACK: Forzar Dark Mode Táctico en mapas claros open-source */
+        .leaflet-layer,
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out,
+        .leaflet-control-attribution {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(120%);
+        }
+
+        /* CAPA 1: HUD INTERFAZ SGX */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column;
+        }
+
+        .sgx-nav {
+            pointer-events: auto;
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 2px solid var(--azul-metal);
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 0 20px rgba(50, 82, 123, 0.4);
+        }
+
+        .sgx-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: var(--amarillo-oro);
+            text-transform: uppercase; font-weight: 700; margin: 0;
+        }
+        .sgx-logo span { color: var(--neon-cyan); font-size: 0.6em; display: block; letter-spacing: 2px;}
+
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .sgx-btn {
+            background: rgba(253, 204, 13, 0.05); color: var(--amarillo-oro);
+            border: 1px solid var(--amarillo-oro); font-family: 'Orbitron', sans-serif;
+            font-size: clamp(0.7rem, 1.5vw, 0.9rem); text-transform: uppercase;
+            padding: 8px 15px; cursor: pointer; transition: all 0.3s ease;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            pointer-events: auto;
+        }
+
+        .sgx-btn:hover, .sgx-btn.active {
+            background: var(--amarillo-oro); color: var(--black-core);
+            box-shadow: 0 0 15px rgba(253, 204, 13, 0.5);
+        }
+
+        /* PANELES DE DATOS (45° CUTS) */
+        .content-panel {
+            pointer-events: auto;
+            background: rgba(26, 26, 26, 0.90);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--azul-metal);
+            margin: 20px; padding: 25px;
+            width: clamp(320px, 90%, 500px);
+            max-height: 75vh; overflow-y: auto;
+            clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+            display: none; flex-direction: column; gap: 15px;
+        }
+
+        .content-panel.active { display: flex; animation: slideIn 0.3s ease-out; }
+
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); margin: 0 0 10px 0; font-size: 1.4rem; text-transform: uppercase; border-bottom: 1px dashed var(--azul-metal); padding-bottom: 5px;}
+        h3 { color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.1rem; text-transform: uppercase;}
+        p, li { margin: 0 0 10px 0; color: #D1D5DB; line-height: 1.5; font-size: 0.95rem; }
+        ul { padding-left: 20px; }
+
+        .data-block {
+            background: rgba(50, 82, 123, 0.15); border-left: 3px solid var(--amarillo-oro);
+            padding: 15px; margin-bottom: 10px; transition: transform 0.2s;
+        }
         
-        /* SGX Standalone Controls UI */
-        #sgx-controls {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-            z-index: 9999;
-            background: rgba(17, 17, 17, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 12px 24px;
-            border-radius: 100px;
-            border: 1px solid rgba(253, 204, 13, 0.4);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: opacity 0.3s;
+        .poi-item { cursor: pointer; }
+        .poi-item:hover { transform: translateX(5px); border-left-color: var(--neon-cyan); background: rgba(50, 82, 123, 0.3); }
+
+        /* CUSTOM LEAFLET POPUP */
+        .leaflet-popup-content-wrapper {
+            background: var(--metal-dark); color: #FFF; border: 1px solid var(--amarillo-oro);
+            border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
         }
-        .ctrl-btn {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            outline: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-        .ctrl-btn:hover {
-            background: rgba(253, 204, 13, 0.2);
-            color: #FDCC0D;
-        }
-        .ctrl-active {
-            color: #FDCC0D;
-        }
+        .leaflet-popup-tip { background: var(--amarillo-oro); }
+        .leaflet-popup-content { margin: 15px; font-family: 'Rajdhani', sans-serif; }
+        .leaflet-popup-content h3 { font-family: 'Orbitron', sans-serif; color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.1rem;}
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--black-core); }
+        ::-webkit-scrollbar-thumb { background: var(--azul-metal); }
     </style>
 </head>
 <body>
 
-    <a-scene loading-screen="dotsColor: #FDCC0D; backgroundColor: #050505" 
-             renderer="antialias: true; colorManagement: true;"
-             vr-mode-ui="enabled: true">
-        
-        <a-assets>
-            <video id="media-content" crossorigin="anonymous" playsinline webkit-playsinline loop muted autoplay preload="auto">
-                <source src="https://video.wixstatic.com/video/fe81a7_5aedd69a9660482bb9f99de469e33c40/1080p/mp4/file.mp4" type="video/mp4">
-            </video>
-        </a-assets>
+    <div id="map"></div>
 
-        <a-videosphere src="#media-content" rotation="0 -90 0"></a-videosphere>
-        
-        <!-- Rotación Cinemática Suave -->
-        <a-entity id="rig" animation="property: rotation; to: 0 0 0; loop: true; dur: 0; easing: linear;">
-            <a-entity camera look-controls="reverseMouseDrag: true" position="0 1.6 0"></a-entity>
-        </a-entity>
+    <div id="ui-layer">
+        <nav class="sgx-nav">
+            <h1 class="sgx-logo">MANGO FEST 2026<span>URBAN EDITION // PLAZA COLÓN, MAYAGÜEZ</span></h1>
+            <div class="nav-buttons">
+                <button class="sgx-btn active" onclick="switchTab('mapa')"><i class="fa-solid fa-map-location-dot"></i> ESPACIO</button>
+                <button class="sgx-btn" onclick="switchTab('agenda')"><i class="fa-solid fa-calendar-days"></i> EVENTOS</button>
+                <button class="sgx-btn" onclick="switchTab('info')"><i class="fa-solid fa-circle-info"></i> INFO & PROD</button>
+                <button class="sgx-btn" onclick="switchTab('sponsors')"><i class="fa-solid fa-handshake"></i> AUSPICIOS</button>
+            </div>
+        </nav>
 
-    </a-scene>
-    
-    <!-- Controles Flotantes SGX (Desaparecen en VR) -->
-    <div id="sgx-controls">
-        <button id="btn-play" class="ctrl-btn"><i class="fas fa-pause"></i></button>
-        <button id="btn-mute" class="ctrl-btn"><i class="fas fa-volume-mute"></i></button>
+        <div id="panel-mapa" class="content-panel active">
+            <h2>Mapeo Espacial</h2>
+            <p>Selecciona un nodo para mover la cámara y ver detalles del sector.</p>
+            <div id="poi-list"></div>
+        </div>
+
+        <div id="panel-agenda" class="content-panel">
+            <h2>Itinerario Oficial</h2>
+            <p style="color: var(--amarillo-oro); font-weight: bold;">Fechas: 12 al 14 de junio de 2026</p>
+            
+            <div class="data-block">
+                <h3>Ruta Cultural (Tarima)</h3>
+                <ul>
+                    <li>Presentaciones de Bomba, Plena y Tambores.</li>
+                    <li>Dinámicas de trovadores en "Pico a Pico" con temática alusiva al mango.</li>
+                </ul>
+            </div>
+            
+            <div class="data-block">
+                <h3>Gastronomía & Competencias</h3>
+                <ul>
+                    <li>Competencias culinarias destacando la creatividad con el mango (postres, bebidas, comidas, bizcochos).</li>
+                    <li>Entrega del galardón especial <strong>"El Mango de Oro"</strong> a expositores destacados.</li>
+                </ul>
+            </div>
+
+            <div class="data-block">
+                <h3>Tradición y Juegos</h3>
+                <ul>
+                    <li>Áreas recreativas tradicionales con estaciones activas de Dominó y Bingo para retención de audiencia.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="panel-info" class="content-panel">
+            <h2>El Concepto</h2>
+            <p>El <strong>Festival del Mango 2026 - Urban Edition</strong> propone una innovadora transformación del tradicional festival, trasladándolo a un concepto urbano en la Plaza Colón de Mayagüez.</p>
+            <p>Durante 3 días, la plaza se convierte en un ecosistema vibrante que conecta al público con la esencia de nuestra identidad cultural de forma interactiva y educativa.</p>
+            
+            <div class="data-block" style="border-left-color: var(--neon-cyan);">
+                <h3 style="color: var(--neon-cyan);">Producción y Contacto</h3>
+                <p><strong>Productor:</strong> Matos Event's</p>
+                <p><strong>Contacto:</strong> Jeanette Matos</p>
+                <p><strong>Teléfono:</strong> 787-206-6661</p>
+                <p><strong>Email:</strong> eventsmatos@gmail.com</p>
+            </div>
+        </div>
+
+        <div id="panel-sponsors" class="content-panel">
+            <h2>Estructura de Inversión</h2>
+            
+            <div class="data-block">
+                <h3>Tier 1: Semilla de Mango - $1,500</h3>
+                <ul>
+                    <li>Espacio 10x10 para carpa, kiosko o activación física.</li>
+                    <li>Logo en redes sociales y página oficial del evento.</li>
+                    <li>Mención oficial en tarima (una vez durante el evento).</li>
+                    <li>Logo en banner grupal de auspiciadores.</li>
+                    <li>Logo en transmisiones y anuncio de video en pausas.</li>
+                </ul>
+            </div>
+
+            <div class="data-block">
+                <h3>Tier 2: Amigos del Mango - $500</h3>
+                <ul>
+                    <li>Espacio asignado para mesa informativa (sin carpa grande).</li>
+                    <li>Mención en redes sociales como auspiciador.</li>
+                    <li>Logo en transmisión durante los tres días (solo en transmisiones).</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const mediaEl = document.getElementById('media-content');
-            const sceneEl = document.querySelector('a-scene');
-            const controlsUI = document.getElementById('sgx-controls');
-            
-            // Ocultar controles al entrar en modo inmersivo (Meta Quest)
-            sceneEl.addEventListener('enter-vr', () => {
-                if(controlsUI) controlsUI.style.display = 'none';
-            });
-            sceneEl.addEventListener('exit-vr', () => {
-                if(controlsUI) controlsUI.style.display = 'flex';
-                // Forzar reproducción al salir para evitar pausas indeseadas
-                if(mediaEl && mediaEl.tagName === 'VIDEO' && !mediaEl.paused) {
-                    mediaEl.play().catch(e => console.warn(e));
-                }
-            });
+        // Data Espacial y Geometría
+        const eventData = {
+            center: [18.2012, -67.1396], // Plaza Colón, Mayagüez
+            bounds: [[18.2005, -67.1405], [18.2020, -67.1385]], // Límites del evento
+            pois: [
+                { id: "tarima", title: "Tarima Principal", desc: "Bomba, Plena y Pico a Pico de Trovadores.", coords: [18.2014, -67.1396], color: "#FDCC0D" },
+                { id: "gastro", title: "Kioskos Gastronómicos", desc: "Competencias culinarias y premio El Mango de Oro.", coords: [18.2011, -67.1399], color: "#00FFFF" },
+                { id: "juegos", title: "Zona Recreativa", desc: "Estaciones de Dominó y Bingo tradicional.", coords: [18.2009, -67.1393], color: "#FFAA00" },
+                { id: "vip", title: "Auspiciadores 10x10", desc: "Carpetas Tier 'Semilla de Mango' y mesas informativas.", coords: [18.2012, -67.1392], color: "#1A1A1A" }
+            ]
+        };
 
-            if(mediaEl && mediaEl.tagName === 'VIDEO') {
-                const btnPlay = document.getElementById('btn-play');
-                const btnMute = document.getElementById('btn-mute');
-                let isPlaying = false;
+        // Inicializar Leaflet Map (Fricción 0, sin keys)
+        const map = L.map('map', {
+            zoomControl: false,
+            maxBounds: eventData.bounds,
+            maxBoundsViscosity: 0.8, // Rebota suave si intentan salir de la plaza
+            minZoom: 17
+        }).setView(eventData.center, 19);
 
-                // Forzar arranque inicial (Autoplay en móviles requiere interacción a veces)
-                mediaEl.play().then(() => {
-                    isPlaying = true;
-                    btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
-                }).catch(error => {
-                    console.log("Sistema bloqueando autoplay. Requiere interacción.", error);
-                    btnPlay.innerHTML = '<i class="fas fa-play"></i>';
-                });
+        // Inyectar base map open-source (CartoDB Positron - muy limpio, filtrado por CSS a dark mode)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: 'SGX Engine | Map data &copy; OpenStreetMap'
+        }).addTo(map);
 
-                // Lógica Botón Play/Pause
-                btnPlay.addEventListener('click', () => {
-                    if (mediaEl.paused) {
-                        mediaEl.play();
-                        isPlaying = true;
-                        btnPlay.innerHTML = '<i class="fas fa-pause"></i>';
-                    } else {
-                        mediaEl.pause();
-                        isPlaying = false;
-                        btnPlay.innerHTML = '<i class="fas fa-play"></i>';
-                    }
-                });
+        // Dibujar Polígono de la Plaza Colón
+        const plazaPolygon = L.polygon([
+            [18.2016, -67.1402],
+            [18.2016, -67.1391],
+            [18.2007, -67.1391],
+            [18.2007, -67.1402]
+        ], {
+            color: '#00FFFF',
+            weight: 2,
+            fillColor: '#32527B',
+            fillOpacity: 0.4
+        }).addTo(map);
 
-                // Lógica Botón Mute/Unmute
-                btnMute.addEventListener('click', () => {
-                    mediaEl.muted = !mediaEl.muted;
-                    if (mediaEl.muted) {
-                        btnMute.innerHTML = '<i class="fas fa-volume-mute"></i>';
-                        btnMute.classList.remove('ctrl-active');
-                    } else {
-                        btnMute.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        btnMute.classList.add('ctrl-active');
-                    }
-                });
-            }
+        // Construir Pines Interactivos y Menú
+        const listContainer = document.getElementById('poi-list');
+
+        eventData.pois.forEach(poi => {
+            // 1. Crear Pin en el UI lateral
+            const div = document.createElement('div');
+            div.className = 'data-block poi-item';
+            div.style.borderLeftColor = poi.color;
+            div.innerHTML = `
+                <h3 style="color: ${poi.color};">${poi.title} <i class="fa-solid fa-crosshairs" style="float:right;"></i></h3>
+                <p style="margin:0;">${poi.desc}</p>
+            `;
+            listContainer.appendChild(div);
+
+            // 2. Crear Pin Físico en el mapa (CircleMarker personalizado)
+            const marker = L.circleMarker(poi.coords, {
+                radius: 8,
+                fillColor: poi.color,
+                color: "#FFF",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            // 3. Vincular Popup HTML SGX style
+            marker.bindPopup(`
+                <h3>${poi.title}</h3>
+                <p style="margin:0; font-size:0.9rem;">${poi.desc}</p>
+            `);
+
+            // 4. Lógica de vuelo de cámara al hacer clic
+            const flyToLocation = () => {
+                map.flyTo(poi.coords, 20, { duration: 1.5, easeLinearity: 0.25 });
+                setTimeout(() => marker.openPopup(), 1500);
+            };
+
+            div.onclick = flyToLocation;
         });
+
+        // Lógica de TABS (Routing sin recargar)
+        function switchTab(tabId) {
+            // Reset de UI
+            document.querySelectorAll('.sgx-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.content-panel').forEach(panel => panel.classList.remove('active'));
+            
+            // Activar selecciones
+            event.currentTarget.classList.add('active');
+            document.getElementById('panel-' + tabId).classList.add('active');
+
+            // Cinemática espacial: Si no están en el mapa, hacer un zoom-out dramático de dron
+            if(tabId !== 'mapa') {
+                map.flyTo(eventData.center, 18.5, { duration: 2 });
+                map.closePopup();
+            }
+        }
     </script>
 </body>
 </html>
