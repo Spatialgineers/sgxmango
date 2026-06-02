@@ -1,362 +1,945 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX // MANGO FEST 2026 - URBAN CORE ENGINE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGX Mango Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <!-- MediaPipe Pose (Includes Tracking & Segmentation) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
     <style>
-        /* Candado Matemático de Viewport */
-        *, *::before, *::after { box-sizing: border-box; }
-
-        :root {
-            --azul-metal: #32527B;
-            --amarillo-oro: #FDCC0D;
-            --neon-cyan: #00FFFF;
-            --metal-dark: #1A1A1A;
-            --black-core: #050505;
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            color: #FDCC0D;
+            font-family: 'Roboto Mono', monospace;
+            user-select: none;
         }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; 
-            height: 100dvh; /* Dynamic Viewport: Mata el bug de iOS Safari */
-            background-color: var(--black-core);
-            font-family: 'Rajdhani', sans-serif;
-            color: #FFFFFF; overflow: hidden;
-        }
-
-        #map {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100dvh; z-index: 1;
-            background: var(--black-core);
-        }
-
-        /* Dark Mode CSS Filter Hack */
-        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(120%);
-        }
-
-        /* HUD LAYOUT */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100dvh;
-            z-index: 10; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between;
-        }
-
-        .sgx-nav {
-            pointer-events: auto;
-            background: rgba(26, 26, 26, 0.85);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border-bottom: 2px solid var(--azul-metal);
-            padding: 12px 20px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 0 20px rgba(50, 82, 123, 0.4);
-            flex-shrink: 0; /* Evita que el NAV se aplaste */
-        }
-
-        .sgx-logo {
-            font-family: 'Orbitron', sans-serif;
-            font-size: clamp(1rem, 2.5vw, 1.8rem);
-            color: var(--amarillo-oro); text-transform: uppercase; font-weight: 700; margin: 0;
-            white-space: nowrap;
-        }
-        .sgx-logo span { color: var(--neon-cyan); font-size: 0.55em; display: block; letter-spacing: 2px;}
-
-        .nav-buttons { display: flex; gap: 8px; }
-
-        .sgx-btn {
-            background: rgba(253, 204, 13, 0.05); color: var(--amarillo-oro);
-            border: 1px solid var(--amarillo-oro); font-family: 'Orbitron', sans-serif;
-            font-size: clamp(0.7rem, 1.5vw, 0.9rem); text-transform: uppercase;
-            padding: 8px 12px; cursor: pointer; transition: all 0.3s ease;
-            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-            pointer-events: auto; white-space: nowrap;
-        }
-
-        .sgx-btn:hover, .sgx-btn.active {
-            background: var(--amarillo-oro); color: var(--black-core);
-            box-shadow: 0 0 15px rgba(253, 204, 13, 0.5);
-        }
-
-        #panel-container-wrapper {
-            display: flex; flex-direction: column; justify-content: flex-end; 
-            height: 100%; pointer-events: none; overflow: hidden;
-            padding: 10px;
-        }
-
-        .content-panel {
-            pointer-events: auto;
-            background: rgba(26, 26, 26, 0.95);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--azul-metal);
-            padding: 20px;
-            width: clamp(320px, 90%, 550px);
-            max-height: 100%; overflow-y: auto;
+        /* SGX Aesthetic HUD */
+        #sgx-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(10, 15, 25, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid #32527B;
+            border-left: 4px solid #FDCC0D;
+            padding: 20px 25px;
             clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
-            display: none; flex-direction: column; gap: 15px;
-            box-shadow: 0 0 35px rgba(0,0,0,0.7);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 15px rgba(50, 82, 123, 0.3);
+            pointer-events: none;
+            min-width: 280px;
+            display: none; /* Hidden until AR starts */
+            transition: opacity 0.3s ease;
         }
 
-        .content-panel.active { display: flex; animation: slideIn 0.3s ease-out; }
-
-        h2 { font-family: 'Orbitron', sans-serif; color: var(--neon-cyan); margin: 0 0 10px 0; font-size: 1.3rem; text-transform: uppercase; border-bottom: 1px dashed var(--azul-metal); padding-bottom: 5px;}
-        h3 { color: var(--amarillo-oro); margin: 0 0 5px 0; font-size: 1.05rem; text-transform: uppercase;}
-        p, li { margin: 0 0 8px 0; color: #D1D5DB; line-height: 1.4; font-size: 0.95rem; }
-        ul { padding-left: 20px; margin: 0; }
-
-        .data-block {
-            background: rgba(50, 82, 123, 0.12); border-left: 3px solid var(--amarillo-oro);
-            padding: 12px; margin-bottom: 10px; position: relative;
-        }
-        
-        .poi-item { cursor: pointer; transition: transform 0.2s; }
-        .poi-item:hover { transform: translateX(5px); border-left-color: var(--neon-cyan); background: rgba(50, 82, 123, 0.22); }
-
-        /* GOOGLE MAPS ROUTING BUTTON */
-        .gmaps-trigger {
-            display: inline-flex; align-items: center; gap: 8px;
-            margin-top: 10px; background: transparent; color: var(--neon-cyan);
-            border: 1px solid var(--neon-cyan); padding: 6px 12px;
-            font-family: 'Orbitron', sans-serif; font-size: 0.75rem; text-decoration: none;
-            cursor: pointer; transition: all 0.3s ease;
-            clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
-        }
-        .gmaps-trigger:hover {
-            background: var(--neon-cyan); color: var(--black-core);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        #sgx-hud h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            margin: 0 0 5px 0;
+            color: #00FFFF;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
         }
 
-        /* SPONSOR LOGO GALLERY GRID */
-        .sponsor-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 12px; margin-top: 10px;
+        .subtitle {
+            font-size: 0.7rem;
+            color: #B87333;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
         }
 
-        .sponsor-card {
-            background: var(--black-core); border: 1px solid rgba(50, 82, 123, 0.5);
-            padding: 8px; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; min-height: 80px; text-decoration: none;
+        .metric {
+            font-size: 0.85rem;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(50, 82, 123, 0.4);
+            padding-bottom: 4px;
+        }
+
+        .metric span {
+            font-weight: 700;
+        }
+
+        .val-cyan { color: #00FFFF; }
+        .val-gold { color: #FDCC0D; }
+        .val-red { color: #FF0055; }
+
+        /* AR Boot Screen */
+        #ar-boot {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #1A1A1A, #050505);
+            z-index: 50;
+        }
+
+        #ar-boot h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: #00FFFF;
+            margin-bottom: 15px;
+            letter-spacing: 4px;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        #ar-boot p {
+            font-size: 0.9rem;
+            color: #B87333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #btn-start {
+            background: rgba(253, 204, 13, 0.1);
+            color: #FDCC0D;
+            border: 1px solid #FDCC0D;
+            padding: 15px 40px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+
+        #btn-start:hover {
+            background: #FDCC0D;
+            color: #050505;
+            box-shadow: 0 0 20px rgba(253, 204, 13, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* Tactical UI Buttons */
+        .sgx-corner-btn {
+            position: absolute;
+            right: 20px;
+            z-index: 200;
+            background: rgba(10, 15, 25, 0.7);
+            border: 1px solid #32527B;
+            color: #00FFFF;
+            padding: 12px 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
             transition: all 0.3s ease;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            display: none; /* Hidden until boot */
         }
 
-        .sponsor-card:hover { border-color: var(--amarillo-oro); box-shadow: 0 0 12px rgba(253, 204, 13, 0.3); transform: scale(1.03); }
-        .sponsor-card img { width: 100%; height: auto; max-height: 45px; object-fit: contain; filter: grayscale(100%) brightness(0.9); transition: filter 0.3s; }
-        .sponsor-card:hover img { filter: grayscale(0%) brightness(1); }
-        .sponsor-card span { font-size: 0.65rem; color: #888; text-transform: uppercase; margin-top: 5px; text-align: center;}
-
-        /* POPUP */
-        .leaflet-popup-content-wrapper { background: var(--metal-dark); color: #FFF; border: 1px solid var(--amarillo-oro); border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
-        .leaflet-popup-tip { background: var(--amarillo-oro); }
-        .leaflet-popup-content { margin: 15px; font-family: 'Rajdhani', sans-serif; }
-
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        /* ================= MOBILE OPTIMIZATION ================= */
-        @media (max-width: 768px) {
-            .sgx-nav { flex-direction: column; align-items: flex-start; padding: 10px; gap: 8px; }
-            .nav-buttons { width: 100%; overflow-x: auto; padding-bottom: 5px; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
-            #panel-container-wrapper { padding: 0; justify-content: flex-end; }
-            .content-panel {
-                width: 100%; margin: 0; 
-                max-height: 45dvh; /* Estricto a menos de la mitad de la pantalla */
-                border-left: none; border-right: none; border-bottom: none; border-top: 2px solid var(--azul-metal);
-                clip-path: polygon(0 20px, 20px 0, 100% 0, 100% 100%, 0 100%);
-                animation: slideUp 0.3s ease-out;
-            }
+        .sgx-corner-btn:hover {
+            background: #00FFFF;
+            color: #050505;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
         }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--azul-metal); border-radius: 4px; }
+
+        #btn-toggle-ui {
+            bottom: 20px;
+        }
+
+        #btn-switch-cam {
+            bottom: 75px; /* Positioned right above the visibility toggle */
+        }
+
+        .lil-gui { 
+            --background-color: rgba(5, 5, 5, 0.9);
+            --text-color: #FDCC0D;
+            --title-background-color: #1A1A1A;
+            --widget-color: #32527B;
+            --hover-color: #00FFFF;
+            --focus-color: #B87333;
+            --number-color: #00FFFF;
+            --string-color: #FDCC0D;
+            font-family: 'Roboto Mono', monospace;
+            border: 1px solid #32527B;
+            transition: opacity 0.3s ease;
+        }
+        .lil-gui .title { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+
+        #webcam { display: none; }
     </style>
 </head>
 <body>
+    <div id="ar-boot">
+        <h2>SGX NEURAL POSE ENGINE</h2>
+        <p>SKELETON TRACKING & DEPTH MASK</p>
+        <button id="btn-start">ACTIVATE SENSORS</button>
+    </div>
 
-    <div id="map"></div>
+    <!-- Interface Controls -->
+    <button id="btn-switch-cam" class="sgx-corner-btn">🔄 CAMBIAR CÁMARA</button>
+    <button id="btn-toggle-ui" class="sgx-corner-btn">👁️ VISIBILIDAD UI</button>
 
-    <div id="ui-layer">
-        <nav class="sgx-nav">
-            <h1 class="sgx-logo">Mango Fest 2026<span>Urban Edition // Casco Urbano</span></h1>
-            <div class="nav-buttons">
-                <button class="sgx-btn active" onclick="switchTab('mapa')"><i class="fa-solid fa-map-location-dot"></i> MAPA</button>
-                <button class="sgx-btn" onclick="switchTab('agenda')"><i class="fa-solid fa-calendar-days"></i> EVENTOS</button>
-                <button class="sgx-btn" onclick="switchTab('info')"><i class="fa-solid fa-circle-info"></i> INFO</button>
-                <button class="sgx-btn" onclick="switchTab('sponsors')"><i class="fa-solid fa-handshake"></i> AUSPICIOS</button>
-            </div>
-        </nav>
-
-        <div id="panel-container-wrapper">
-            <div id="panel-mapa" class="content-panel active">
-                <h2>Ubicaciones del Casco Urbano</h2>
-                <p>Navega los puntos de interés. Cada nodo incluye enlace GPS directo a Google Maps.</p>
-                <div id="poi-list"></div>
-            </div>
-
-            <div id="panel-agenda" class="content-panel">
-                <h2>Cronograma Estructurado</h2>
-                <p style="color: var(--amarillo-oro); font-weight: bold; margin-top:-5px;">12 al 14 de Junio de 2026 // Plaza Colón</p>
-                
-                <div class="data-block">
-                    <h3>Viernes 12 - Apertura Urbana</h3>
-                    <p>Apertura oficial de exhibidores y quioscos gastronómicos. Presentaciones folclóricas continuas en tarima con percusión y música autóctona.</p>
-                </div>
-                <div class="data-block">
-                    <h3>Sábado 13 - Batalla de Trova</h3>
-                    <p><strong>Ruta Cultural:</strong> Expresiones de Bomba y Plena en vivo.<br><strong>Pico a Pico:</strong> Competencia de trovadores con rimas obligatorias enfocadas en la historia del mango.</p>
-                </div>
-                <div class="data-block">
-                    <h3>Domingo 14 - El Mango de Oro</h3>
-                    <p>Evaluación del jurado experto. Otorgación del gran galardón <strong>"El Mango de Oro"</strong> a la innovación culinaria. Cierre con desfile de comparsas urbanas.</p>
-                </div>
-            </div>
-
-            <div id="panel-info" class="content-panel">
-                <h2>Estrategia Operativa</h2>
-                <p>El festival toma el control de la Plaza Colón de Mayagüez integrando estaciones interactivas de Dominó y Bingo tradicional para generar dinámicas de retención masiva y engagement intergeneracional.</p>
-                
-                <div class="data-block">
-                    <h3>Promoción y Media Partners</h3>
-                    <ul>
-                        <li>Radio Amor 90.9 FM (Cobertura radial en vivo)</li>
-                        <li>Noticias de Mayagüez (Despliegue de prensa digital)</li>
-                    </ul>
-                </div>
-
-                <div class="data-block" style="border-left-color: var(--neon-cyan);">
-                    <h3>Logística Central</h3>
-                    <p><strong>Productora:</strong> Matos Event's<br><strong>Directora:</strong> Jeanette Matos<br><strong>Tel:</strong> 787-206-6661<br><strong>Email:</strong> eventsmatos@gmail.com</p>
-                </div>
-            </div>
-
-            <div id="panel-sponsors" class="content-panel">
-                <h2>Estructura B2B</h2>
-                
-                <div class="data-block">
-                    <h3>Semilla de Mango // $1,500</h3>
-                    <p>Espacio 10x10 para activación. Logo en web oficial, mención en tarima y banners grupales. Anuncios de video en pausas de transmisión.</p>
-                </div>
-
-                <div class="data-block">
-                    <h3>Amigos del Mango // $500</h3>
-                    <p>Espacio para mesa informativa. Mención en redes sociales y logo en las transmisiones digitales del evento.</p>
-                </div>
-
-                <h2>Marcas Socias</h2>
-                <div class="sponsor-grid" id="sponsor-gallery-dom"></div>
-            </div>
+    <div id="sgx-hud">
+        <h1>SGX MANGO VISUALIZER</h1>
+        <div class="subtitle">FRONTAL ARCADE COLLISION // SPATIALGINEERS</div>
+        <div class="metric">
+            <span>ACTIVE_MANGOS</span>
+            <span id="ui-instances" class="val-gold">0</span>
+        </div>
+        <div class="metric">
+            <span>SKELETON_TRACKING</span>
+            <span id="ui-tracking" class="val-red">OFFLINE</span>
+        </div>
+        <div class="metric">
+            <span>AUDIO_REACTIVE</span>
+            <span id="ui-audio" class="val-cyan">OFF</span>
         </div>
     </div>
 
-    <script>
-        // BACKEND SIMULADO DE AUSPICIOS
-        const sponsorDatabase = [
-            { name: "Spatialgineers", logo: "https://static.wixstatic.com/media/fe81a7_fe81a7_fe81a7~mv2.png", url: "https://www.spatialgineers.com", tier: "Semilla" },
-            { name: "Matos Events", logo: "https://via.placeholder.com/120x60/1a1a1a/fdcc0d?text=MATOS", url: "mailto:eventsmatos@gmail.com", tier: "Semilla" },
-            { name: "Radio Amor", logo: "https://via.placeholder.com/120x60/1a1a1a/00ffff?text=AMOR+90.9", url: "https://google.com", tier: "Media" },
-            { name: "Mayagüez Sabe a Mangó", logo: "https://static.wixstatic.com/media/fe81a7_a9ac4a22b6634a81bde864519be8305f~mv2.png", url: "https://www.mayaguezsabeamango.com", tier: "Amigos" }
-        ];
+    <video id="webcam" autoplay muted playsinline></video>
 
-        const eventData = {
-            center: [18.2012, -67.1396], // Plaza Colón
-            // SGX HACK: Expandí radicalmente el 'bounds' de colisión. 
-            // Te deja explorar casi todo Mayagüez antes de rebotar.
-            bounds: [[18.1800, -67.1650], [18.2200, -67.1150]], 
-            pois: [
-                { id: "plaza", title: "Plaza Colón", desc: "Quioscos culinarios y competencia Mango de Oro.", coords: [18.2012, -67.1396], color: "#FDCC0D" },
-                { id: "teatro", title: "Teatro Yagüez", desc: "Referencia histórica y punto oeste.", coords: [18.2010, -67.1415], color: "#00FFFF" },
-                { id: "jibarita", title: "La Jibarita", desc: "Punto matriz este de la ruta urbana.", coords: [18.2018, -67.1368], color: "#FFAA00" },
-                { id: "tarima", title: "Tarima Central", desc: "Bomba, Plena y Pico a Pico.", coords: [18.2014, -67.1396], color: "#FF0055" }
-            ]
-        };
-
-        const map = L.map('map', {
-            zoomControl: false,
-            maxBounds: eventData.bounds,
-            maxBoundsViscosity: 0.4, // Rebote elástico, no una pared dura
-            minZoom: 14, // Te deja hacer zoom out lejísimos
-            maxZoom: 21
-        }).setView(eventData.center, 18);
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: 'SGX Metric Engine'
-        }).addTo(map);
-
-        L.polygon([
-            [18.2022, -67.1420], [18.2025, -67.1360],
-            [18.2002, -67.1360], [18.2000, -67.1420]
-        ], { color: '#32527B', weight: 1, fillColor: '#32527B', fillOpacity: 0.15 }).addTo(map);
-
-        const listContainer = document.getElementById('poi-list');
-
-        eventData.pois.forEach(poi => {
-            const div = document.createElement('div');
-            div.className = 'data-block poi-item';
-            div.style.borderLeftColor = poi.color;
-            div.innerHTML = `
-                <h3 style="color: ${poi.color};">${poi.title} <i class="fa-solid fa-crosshairs" style="float:right;"></i></h3>
-                <p style="margin:0 0 5px 0;">${poi.desc}</p>
-                <a class="gmaps-trigger" href="https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}" target="_blank">
-                    <i class="fa-solid fa-diamond-turn-right"></i> Ir vía GPS
-                </a>
-            `;
-            listContainer.appendChild(div);
-
-            const marker = L.circleMarker(poi.coords, {
-                radius: 9, fillColor: poi.color, color: "#FFF", weight: 2, opacity: 1, fillOpacity: 0.9
-            }).addTo(map);
-
-            marker.bindPopup(`
-                <h3 style="color:${poi.color}; font-family:'Orbitron'; margin:0 0 5px 0;">${poi.title}</h3>
-                <p style="margin:0 0 10px 0; font-size:0.9rem; color:#DDD;">${poi.desc}</p>
-                <a class="gmaps-trigger" href="https://www.google.com/maps/search/?api=1&query=${poi.coords[0]},${poi.coords[1]}" target="_blank" style="color:#FFF;">
-                    <i class="fa-solid fa-location-arrow"></i> Navegar
-                </a>
-            `);
-
-            const flyToLocation = () => {
-                const isMobile = window.innerWidth <= 768;
-                // Offset de cámara corregido para la nueva altura del bottom-sheet
-                const targetLat = isMobile ? poi.coords[0] - 0.0007 : poi.coords[0];
-                map.flyTo([targetLat, poi.coords[1]], 18, { duration: 1.2 });
-                setTimeout(() => marker.openPopup(), 1200);
-            };
-
-            div.querySelector('h3').onclick = flyToLocation;
-            marker.on('click', flyToLocation);
-        });
-
-        const galleryContainer = document.getElementById('sponsor-gallery-dom');
-        sponsorDatabase.forEach(sp => {
-            const card = document.createElement('a');
-            card.className = 'sponsor-card';
-            card.href = sp.url;
-            card.target = '_blank';
-            card.innerHTML = `<img src="${sp.logo}" alt="${sp.name}"><span>${sp.tier}</span>`;
-            galleryContainer.appendChild(card);
-        });
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.sgx-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.content-panel').forEach(panel => panel.classList.remove('active'));
-            
-            event.currentTarget.classList.add('active');
-            document.getElementById('panel-' + tabId).classList.add('active');
-
-            if(tabId !== 'mapa') {
-                const isMobile = window.innerWidth <= 768;
-                const centerLat = isMobile ? eventData.center[0] - 0.001 : eventData.center[0];
-                map.flyTo([centerLat, eventData.center[1]], 16.5, { duration: 1.5 });
-                map.closePopup();
+    <!-- Import Maps -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.js"
             }
         }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import GUI from 'lil-gui';
+
+        // --------------------------------------------------------
+        // 1. SGX ARCHITECTURE & SCENE SETUP
+        // --------------------------------------------------------
+        const container = document.body;
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.005);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 40); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); 
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xFDCC0D, 1.5);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight(0x00FFFF, 2.0); 
+        rimLight.position.set(-15, 5, -15);
+        scene.add(rimLight);
+
+        // --------------------------------------------------------
+        // 2. STATE & PARAMETERS (lil-gui)
+        // --------------------------------------------------------
+        const SGX_PARAMS = {
+            mangoDensity: 50,
+            rainSpeed: 0.1,
+            gravity: 0.01,
+            windX: 0.0,
+            bounciness: 2.0,
+            mangoScale: 1.2,
+            topAssetScale: 10.0, // Escala del nuevo modelo superior
+            showSkeleton: false,
+            colRadius: 2.5,
+            audioReactive: false
+        };
+
+        let currentFacingMode = 'user'; // 'user' (Frontal) o 'environment' (Trasera)
+        let activeStream = null;
+        let poseCameraUtils = null;
+        let poseInstance = null; // AÑADIDO: Preserva la IA globalmente al cambiar de cámara
+
+        const gui = new GUI({ title: 'SGX TELEMETRY // OVERRIDE' });
+        gui.domElement.id = 'sgx-gui';
+        gui.domElement.style.display = 'none'; // Hidden until boot
+        gui.domElement.style.position = 'absolute';
+        gui.domElement.style.top = '20px';
+        gui.domElement.style.right = '20px';
+        gui.domElement.style.zIndex = '100';
+
+        const pSwarm = gui.addFolder('SWARM PHYSICS (2.5D)');
+        pSwarm.add(SGX_PARAMS, 'mangoDensity', 50, 1500).name('Density').step(1);
+        pSwarm.add(SGX_PARAMS, 'rainSpeed', 0.1, 2.0).name('Rain Speed');
+        pSwarm.add(SGX_PARAMS, 'windX', -1.0, 1.0).name('Wind (X-Axis)');
+        pSwarm.add(SGX_PARAMS, 'gravity', 0.005, 0.1).name('Gravity Pull');
+        pSwarm.add(SGX_PARAMS, 'mangoScale', 0.1, 3.0).name('Asset Scale');
+        
+        const pInteract = gui.addFolder('INTERACTION');
+        pInteract.add(SGX_PARAMS, 'bounciness', 0.5, 5.0).name('Bounce Force');
+        pInteract.add(SGX_PARAMS, 'colRadius', 1.0, 5.0).name('Hitbox Thickness');
+        pInteract.add(SGX_PARAMS, 'topAssetScale', 1.0, 15.0).name('Top Boss Scale').onChange(v => {
+            if(topAsset && topAsset.userData) topAsset.userData.baseScale = v;
+        });
+        pInteract.add(SGX_PARAMS, 'showSkeleton').name('Hologram Skeleton');
+        pInteract.add(SGX_PARAMS, 'audioReactive').name('Audio Reactivity').onChange(v => {
+            document.getElementById('ui-audio').innerText = v ? "ON" : "OFF";
+            document.getElementById('ui-audio').className = v ? "val-gold" : "val-cyan";
+            if (v) initAudio();
+        });
+
+        // Toggle UI Logic
+        let uiIsVisible = false;
+        document.getElementById('btn-toggle-ui').addEventListener('click', () => {
+            uiIsVisible = !uiIsVisible;
+            const hud = document.getElementById('sgx-hud');
+            const guiMenu = document.getElementById('sgx-gui');
+            const btnToggle = document.getElementById('btn-toggle-ui');
+            const btnSwitchCam = document.getElementById('btn-switch-cam');
+            
+            if(uiIsVisible) {
+                hud.style.opacity = '1';
+                guiMenu.style.opacity = '1';
+                guiMenu.style.pointerEvents = 'auto';
+                btnSwitchCam.style.opacity = '1';
+                btnSwitchCam.style.pointerEvents = 'auto';
+                btnToggle.style.opacity = '1';
+            } else {
+                hud.style.opacity = '0';
+                guiMenu.style.opacity = '0';
+                guiMenu.style.pointerEvents = 'none';
+                btnSwitchCam.style.opacity = '0';
+                btnSwitchCam.style.pointerEvents = 'none';
+                btnToggle.style.opacity = '0.3'; // Mantener sutil para recuperarlo
+            }
+        });
+
+        // --------------------------------------------------------
+        // 3. AUDIO REACTIVITY ENGINE
+        // --------------------------------------------------------
+        let audioCtx, analyser, dataArray;
+        let currentAudioPulse = 0;
+
+        async function initAudio() {
+            if(audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+            } catch(e) {
+                console.warn("Audio Context Blocked:", e);
+                SGX_PARAMS.audioReactive = false;
+                gui.controllersRecursive().forEach(c => c.updateDisplay());
+            }
+        }
+
+        function getAudioPulse() {
+            if(!analyser || !SGX_PARAMS.audioReactive) return 0;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for(let i = 0; i < 10; i++) sum += dataArray[i]; 
+            return sum / 10 / 255.0; 
+        }
+
+        // --------------------------------------------------------
+        // 4. NEURAL AR: POSE, CAMERAS & DEPTH MASKING
+        // --------------------------------------------------------
+        const videoElement = document.getElementById('webcam');
+        const maskCanvas = document.createElement('canvas');
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+        
+        let videoTexture, maskTexture;
+        let personPlane, bgPlane;
+        let currentLandmarks = null;
+        let skeletonMeshes = [];
+
+        // --- SKELETON LINES SETUP ---
+        const POSE_CONNECTIONS = [
+            [11, 12], [11, 13], [13, 15], [15, 19], [15, 17], [15, 21], 
+            [12, 14], [14, 16], [16, 20], [16, 18], [16, 22], 
+            [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10],
+            [11, 23], [12, 24], [23, 24] // Torso
+        ];
+        const skeletonMaterial = new THREE.LineBasicMaterial({ color: 0x00FFFF, linewidth: 3, transparent: true, opacity: 0.9 });
+        const skeletonGeometry = new THREE.BufferGeometry();
+        const linePositions = new Float32Array(POSE_CONNECTIONS.length * 6);
+        skeletonGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        const skeletonLines = new THREE.LineSegments(skeletonGeometry, skeletonMaterial);
+        skeletonLines.visible = false;
+
+        async function startCamera() {
+            if (poseCameraUtils) {
+                poseCameraUtils.stop();
+            }
+
+            if (activeStream) {
+                activeStream.getTracks().forEach(track => track.stop());
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: 640, height: 480 }
+                });
+                videoElement.srcObject = stream;
+                activeStream = stream;
+
+                // Actualizar dirección de la textura de Video y Mascara
+                if (videoTexture && maskTexture) {
+                    const repeatX = currentFacingMode === 'user' ? -1 : 1;
+                    videoTexture.repeat.set(repeatX, 1);
+                    maskTexture.repeat.set(repeatX, 1);
+                }
+
+                // Reiniciar el tracker con el nuevo stream
+                if (poseInstance) {
+                    poseCameraUtils = new Camera(videoElement, {
+                        onFrame: async () => {
+                            await poseInstance.send({image: videoElement});
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    poseCameraUtils.start();
+                }
+            } catch (err) {
+                console.error("Error cambiando cámara:", err);
+                alert("No se pudo acceder a la cámara seleccionada.");
+            }
+        }
+
+        document.getElementById('btn-switch-cam').addEventListener('click', async () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            await startCamera();
+        });
+
+        async function initNeuralPose() {
+            // Textures setup
+            videoTexture = new THREE.VideoTexture(videoElement);
+            videoTexture.minFilter = THREE.LinearFilter;
+            videoTexture.magFilter = THREE.LinearFilter;
+            videoTexture.colorSpace = THREE.SRGBColorSpace;
+            videoTexture.center.set(0.5, 0.5);
+            // Default repeat for front camera (user)
+            videoTexture.repeat.set(currentFacingMode === 'user' ? -1 : 1, 1); 
+
+            maskTexture = new THREE.CanvasTexture(maskCanvas);
+            maskTexture.minFilter = THREE.LinearFilter;
+            maskTexture.center.set(0.5, 0.5);
+            maskTexture.repeat.set(currentFacingMode === 'user' ? -1 : 1, 1);
+
+            // Background Plane
+            const bgMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, depthWrite: false });
+            bgPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), bgMaterial);
+            bgPlane.position.z = -50;
+            scene.add(bgPlane);
+
+            // Person Mask Plane (Z = 0)
+            const personMaterial = new THREE.MeshBasicMaterial({
+                map: videoTexture,
+                alphaMap: maskTexture,
+                alphaTest: 0.5, 
+                transparent: true,
+                depthWrite: true,
+                side: THREE.DoubleSide
+            });
+            personPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), personMaterial);
+            personPlane.position.z = 0; 
+            scene.add(personPlane);
+            scene.add(skeletonLines);
+
+            // Setup Skeleton Visuals
+            const jointGeo = new THREE.SphereGeometry(1, 16, 16);
+            const jointMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF, wireframe: true, transparent: true, opacity: 0.8 });
+            for(let i=0; i<12; i++) {
+                let m = new THREE.Mesh(jointGeo, jointMat);
+                m.visible = false;
+                scene.add(m);
+                skeletonMeshes.push(m);
+            }
+
+            resizePlanes();
+
+            // Initialize Pose AI
+            poseInstance = new Pose({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }});
+            
+            poseInstance.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: true, 
+                smoothSegmentation: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            
+            poseInstance.onResults((results) => {
+                if(results.segmentationMask) {
+                    if(maskCanvas.width !== results.segmentationMask.width) {
+                        maskCanvas.width = results.segmentationMask.width;
+                        maskCanvas.height = results.segmentationMask.height;
+                    }
+                    maskCtx.save();
+                    maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+                    maskCtx.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height);
+                    maskCtx.restore();
+                    maskTexture.needsUpdate = true;
+                }
+
+                if(results.poseLandmarks) {
+                    currentLandmarks = results.poseLandmarks;
+                    document.getElementById('ui-tracking').innerText = "ONLINE";
+                    document.getElementById('ui-tracking').className = "val-cyan";
+                } else {
+                    currentLandmarks = null;
+                    document.getElementById('ui-tracking').innerText = "OFFLINE";
+                    document.getElementById('ui-tracking').className = "val-red";
+                }
+            });
+
+            if (!poseCameraUtils) {
+                poseCameraUtils = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await poseInstance.send({image: videoElement});
+                    },
+                    width: 640,
+                    height: 480
+                });
+                poseCameraUtils.start();
+            }
+        }
+
+        // Coordinate Mapper - Adapta el eje X dependiendo si usamos cámara frontal o trasera
+        function getMappedCoords(lm) {
+            const aspect = window.innerWidth / window.innerHeight;
+            const distPerson = camera.position.z; 
+            const heightPerson = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distPerson;
+            const widthPerson = heightPerson * aspect;
+            
+            // Si es cámara frontal (efecto espejo), invertimos el mapa X. Si es trasera, es directo.
+            const xDir = currentFacingMode === 'user' ? (0.5 - lm.x) : (lm.x - 0.5);
+            const x = xDir * widthPerson;
+            const y = -(lm.y - 0.5) * heightPerson;
+            const z = -lm.z * widthPerson; 
+            
+            return new THREE.Vector3(x, y, z);
+        }
+
+        function resizePlanes() {
+            if(!personPlane || !bgPlane) return;
+            const aspect = window.innerWidth / window.innerHeight;
+            
+            const distPerson = camera.position.z - personPlane.position.z;
+            const heightPerson = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distPerson;
+            personPlane.scale.set(heightPerson * aspect, heightPerson, 1);
+
+            const distBg = camera.position.z - bgPlane.position.z;
+            const heightBg = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distBg;
+            bgPlane.scale.set(heightBg * aspect, heightBg, 1);
+        }
+
+        // --------------------------------------------------------
+        // 5. ASSET INGESTION (SWARM + TOP BOSS ASSET)
+        // --------------------------------------------------------
+        const loader = new GLTFLoader();
+        loader.setCrossOrigin('anonymous');
+        
+        // 5.1 The Mangos
+        const MANGO_URL = 'https://static.wixstatic.com/3d/fe81a7_b9bf8286266642d7b0fd6a664b00f304.glb';
+        
+        // 5.2 The Top Asset (Static Wixstatic URL directo)
+        const TOP_ASSET_URL = 'https://static.wixstatic.com/3d/fe81a7_384b03d7b35c4483890f4aff73c94138.glb';
+
+        let topAsset = null;
+
+        loader.load(TOP_ASSET_URL, (gltf) => {
+            topAsset = gltf.scene;
+            
+            // Centrar pivot point
+            const box = new THREE.Box3().setFromObject(topAsset);
+            const center = box.getCenter(new THREE.Vector3());
+            topAsset.position.sub(center); 
+            
+            const wrapper = new THREE.Group();
+            wrapper.add(topAsset);
+            
+            wrapper.position.set(0, 12, 4); // En la parte superior de la pantalla interactuable
+            
+            topAsset.traverse(c => {
+                if(c.isMesh) {
+                    c.material.roughness = 0.3;
+                    c.material.metalness = 0.4;
+                }
+            });
+            
+            scene.add(wrapper);
+            
+            // Inyectar datos físicos en userData
+            topAsset.userData = {
+                wrapper: wrapper,
+                rotSpeedY: 0.01,
+                rotSpeedX: 0.005,
+                baseScale: SGX_PARAMS.topAssetScale,
+                targetScale: SGX_PARAMS.topAssetScale
+            };
+        }, undefined, (error) => {
+            console.warn("Error cargando Asset Superior. Generando holograma SGX de respaldo...", error);
+            
+            // FALLBACK ARCHITECTURE
+            const fallbackGeo = new THREE.OctahedronGeometry(1.5, 0);
+            const fallbackMat = new THREE.MeshStandardMaterial({ 
+                color: 0x00FFFF, 
+                roughness: 0.1, 
+                metalness: 0.9,
+                wireframe: true
+            });
+            topAsset = new THREE.Mesh(fallbackGeo, fallbackMat);
+            
+            const wrapper = new THREE.Group();
+            wrapper.add(topAsset);
+            wrapper.position.set(0, 12, 4);
+            scene.add(wrapper);
+            
+            topAsset.userData = {
+                wrapper: wrapper,
+                rotSpeedY: 0.01,
+                rotSpeedX: 0.005,
+                baseScale: SGX_PARAMS.topAssetScale,
+                targetScale: SGX_PARAMS.topAssetScale
+            };
+        });
+
+        // --------------------------------------------------------
+        // 6. PHYSICS & CONTINUOUS RAIN SWARM (2.5D ARCADE MODE)
+        // --------------------------------------------------------
+        const MAX_INSTANCES = 1500; 
+        const SWARM_WIDTH = 25; 
+        const SWARM_HEIGHT = 100;
+        
+        let instancedMesh;
+        let updateColorsFlag = false;
+        const colorDefault = new THREE.Color(0xffffff);
+        const colorHit = new THREE.Color(0x00FFFF); 
+
+        const positions = new Float32Array(MAX_INSTANCES * 3);
+        const velocities = new Float32Array(MAX_INSTANCES * 3);
+        const rotations = new Float32Array(MAX_INSTANCES * 3);
+        const rotSpeeds = new Float32Array(MAX_INSTANCES * 3);
+        const bounced = new Uint8Array(MAX_INSTANCES); 
+        
+        const dummy = new THREE.Object3D();
+
+        function initSwarmPhysics() {
+            for (let i = 0; i < MAX_INSTANCES; i++) {
+                resetMango(i, true);
+            }
+        }
+
+        function resetMango(i, initial = false) {
+            let idx3 = i * 3;
+            
+            positions[idx3] = (Math.random() - 0.5) * SWARM_WIDTH * 2; 
+            positions[idx3 + 2] = 4 + Math.random() * 4; 
+            
+            if(initial) {
+                positions[idx3 + 1] = (Math.random() * SWARM_HEIGHT * 1.5) - (SWARM_HEIGHT / 3); 
+            } else {
+                positions[idx3 + 1] = (SWARM_HEIGHT / 2) + Math.random() * (SWARM_HEIGHT / 2); 
+            }
+
+            velocities[idx3] = (Math.random() - 0.5) * 0.05; 
+            velocities[idx3 + 1] = -(Math.random() * 0.3 + 0.1); 
+            velocities[idx3 + 2] = (Math.random() - 0.5) * 0.05; 
+
+            rotations[idx3] = Math.random() * Math.PI * 2;
+            rotations[idx3 + 1] = Math.random() * Math.PI * 2;
+            rotations[idx3 + 2] = Math.random() * Math.PI * 2;
+
+            rotSpeeds[idx3] = (Math.random() - 0.5) * 0.05;
+            rotSpeeds[idx3 + 1] = (Math.random() - 0.5) * 0.05;
+            rotSpeeds[idx3 + 2] = (Math.random() - 0.5) * 0.05;
+
+            bounced[i] = 0;
+
+            if (instancedMesh) {
+                instancedMesh.setColorAt(i, colorDefault);
+                updateColorsFlag = true;
+            }
+        }
+
+        loader.load(MANGO_URL, (gltf) => {
+            let swarmGeo, swarmMat;
+            gltf.scene.traverse((child) => {
+                if (child.isMesh && !swarmGeo) {
+                    swarmGeo = child.geometry.clone();
+                    swarmMat = child.material.clone();
+                    swarmMat.roughness = 0.3;
+                    swarmMat.metalness = 0.2;
+                }
+            });
+
+            if (swarmGeo && swarmMat) {
+                initSwarmPhysics();
+                instancedMesh = new THREE.InstancedMesh(swarmGeo, swarmMat, MAX_INSTANCES);
+                instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                
+                for(let i=0; i<MAX_INSTANCES; i++) {
+                    instancedMesh.setColorAt(i, colorDefault);
+                }
+                instancedMesh.instanceColor.needsUpdate = true;
+
+                scene.add(instancedMesh);
+            }
+        });
+
+        // --------------------------------------------------------
+        // 7. HIGH-PERFORMANCE RENDER LOOP & 2.5D COLLISIONS
+        // --------------------------------------------------------
+        const clock = new THREE.Clock();
+
+        function updateSystem() {
+            requestAnimationFrame(updateSystem);
+            
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+            const dTime = delta * 60; 
+
+            let rawAudio = getAudioPulse();
+            currentAudioPulse += (rawAudio - currentAudioPulse) * 0.2;
+            const audioBounceForce = 1.0 + (currentAudioPulse * 4.0); 
+            const audioScaleMult = 1.0 + (currentAudioPulse * 1.5); 
+
+            // --- BUILD COLLISION MATRIX ---
+            const hitNodes = [];
+            if(currentLandmarks) {
+                const targetIndices = [0, 11, 12, 13, 14, 15, 16, 19, 20, 23, 24];
+                const baseRad = SGX_PARAMS.colRadius;
+                const radii = [baseRad*1.5, baseRad*2, baseRad*2, baseRad*1.5, baseRad*1.5, baseRad*1.5, baseRad*1.5, baseRad*1.2, baseRad*1.2, baseRad*2.5, baseRad*2.5];
+                
+                for(let i=0; i<targetIndices.length; i++) {
+                    let lm = currentLandmarks[targetIndices[i]];
+                    if(lm.visibility > 0.6) {
+                        let pos = getMappedCoords(lm);
+                        hitNodes.push({ x: pos.x, y: pos.y, z: pos.z, r: radii[i] });
+                        
+                        if(skeletonMeshes[i]) {
+                            skeletonMeshes[i].position.copy(pos);
+                            skeletonMeshes[i].scale.setScalar(radii[i]);
+                            skeletonMeshes[i].visible = SGX_PARAMS.showSkeleton;
+                        }
+                    } else {
+                        if(skeletonMeshes[i]) skeletonMeshes[i].visible = false;
+                    }
+                }
+
+                if (SGX_PARAMS.showSkeleton) {
+                    let lineIdx = 0;
+                    POSE_CONNECTIONS.forEach(([startIdx, endIdx]) => {
+                        const lm1 = currentLandmarks[startIdx];
+                        const lm2 = currentLandmarks[endIdx];
+                        if (lm1.visibility > 0.5 && lm2.visibility > 0.5) {
+                            const p1 = getMappedCoords(lm1);
+                            const p2 = getMappedCoords(lm2);
+                            linePositions[lineIdx++] = p1.x; linePositions[lineIdx++] = p1.y; linePositions[lineIdx++] = p1.z;
+                            linePositions[lineIdx++] = p2.x; linePositions[lineIdx++] = p2.y; linePositions[lineIdx++] = p2.z;
+                        } else {
+                            linePositions[lineIdx++] = 0; linePositions[lineIdx++] = 0; linePositions[lineIdx++] = 0;
+                            linePositions[lineIdx++] = 0; linePositions[lineIdx++] = 0; linePositions[lineIdx++] = 0;
+                        }
+                    });
+                    skeletonGeometry.attributes.position.needsUpdate = true;
+                    skeletonLines.visible = true;
+                } else {
+                    skeletonLines.visible = false;
+                }
+            } else {
+                skeletonMeshes.forEach(m => m.visible = false);
+                skeletonLines.visible = false;
+            }
+
+            // --- INTERACTION CON TOP ASSET (PACÍFICO Y CENTRADO) ---
+            if (topAsset && topAsset.userData && topAsset.userData.wrapper) {
+                const wrapper = topAsset.userData.wrapper;
+                
+                // Rotación restringida de lado a lado (aprox 20 grados)
+                wrapper.rotation.y = Math.sin(time * 2.0) * 0.35;
+                wrapper.rotation.x = 0;
+                
+                // Flote natural + Centro absoluto (X=0) + Reactividad de audio en Y
+                wrapper.position.y = 12 + Math.sin(time * 1.5) * 0.8 + (currentAudioPulse * 3);
+                wrapper.position.x = 0; 
+
+                // NO HAY COLISIÓN (Se eliminó la detección de golpes)
+                // El tamaño ahora escala pacíficamente de acuerdo con el audio (Efecto "Pump")
+                topAsset.userData.targetScale = topAsset.userData.baseScale + (currentAudioPulse * 1.5);
+
+                // Interpolar escala
+                wrapper.scale.lerp(new THREE.Vector3(
+                    topAsset.userData.targetScale,
+                    topAsset.userData.targetScale,
+                    topAsset.userData.targetScale
+                ), 0.15);
+            }
+
+            // --- MANGOS SWARM LOGIC ---
+            let activeCount = 0;
+            if (instancedMesh) {
+                activeCount = Math.min(Math.floor(SGX_PARAMS.mangoDensity), MAX_INSTANCES);
+                instancedMesh.count = activeCount;
+
+                for (let i = 0; i < activeCount; i++) {
+                    let idx3 = i * 3;
+                    
+                    let x = positions[idx3];
+                    let y = positions[idx3 + 1];
+                    let z = positions[idx3 + 2];
+
+                    let vx = velocities[idx3];
+                    let vy = velocities[idx3 + 1];
+                    let vz = velocities[idx3 + 2];
+
+                    vy -= SGX_PARAMS.gravity * dTime;
+                    vx += SGX_PARAMS.windX * 0.05 * dTime;
+
+                    vx *= 0.98;
+                    vz *= 0.98;
+
+                    if (bounced[i] === 0 && vy < 0 && hitNodes.length > 0) {
+                        for(let n=0; n<hitNodes.length; n++) {
+                            let node = hitNodes[n];
+                            let dx = x - node.x;
+                            let dy = y - node.y;
+                            let dist2D = Math.sqrt(dx*dx + dy*dy);
+                            
+                            if(dist2D < node.r + (SGX_PARAMS.mangoScale * 2.0)) {
+                                let nx = dx / dist2D;
+                                let ny = dy / dist2D;
+                                
+                                const pwr = SGX_PARAMS.bounciness * audioBounceForce;
+                                
+                                vx = nx * pwr * 1.5;
+                                vy = Math.abs(vy) * 0.4 + (ny * pwr) + 0.8;
+                                vz = pwr * 1.2; 
+                                
+                                rotSpeeds[idx3] *= 4;
+                                rotSpeeds[idx3+1] *= 4;
+                                bounced[i] = 1;
+
+                                instancedMesh.setColorAt(i, colorHit);
+                                updateColorsFlag = true;
+                                break; 
+                            }
+                        }
+                    }
+
+                    x += vx * SGX_PARAMS.rainSpeed * dTime;
+                    y += vy * SGX_PARAMS.rainSpeed * dTime;
+                    z += vz * SGX_PARAMS.rainSpeed * dTime;
+
+                    if (y < -SWARM_HEIGHT / 2 || z > 40) {
+                        resetMango(i, false);
+                        continue; 
+                    }
+
+                    positions[idx3] = x;
+                    positions[idx3 + 1] = y;
+                    positions[idx3 + 2] = z;
+                    velocities[idx3] = vx;
+                    velocities[idx3 + 1] = vy;
+                    velocities[idx3 + 2] = vz;
+
+                    rotations[idx3] += rotSpeeds[idx3] * dTime;
+                    rotations[idx3 + 1] += rotSpeeds[idx3 + 1] * dTime;
+                    rotations[idx3 + 2] += rotSpeeds[idx3 + 2] * dTime;
+
+                    dummy.position.set(x, y, z);
+                    dummy.rotation.set(rotations[idx3], rotations[idx3 + 1], rotations[idx3 + 2]);
+                    
+                    const s = SGX_PARAMS.mangoScale * audioScaleMult;
+                    dummy.scale.set(s, s, s);
+                    
+                    dummy.updateMatrix();
+                    instancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+                
+                if (activeCount > 0) {
+                    instancedMesh.instanceMatrix.needsUpdate = true;
+                    if (updateColorsFlag) {
+                        instancedMesh.instanceColor.needsUpdate = true;
+                        updateColorsFlag = false;
+                    }
+                }
+            }
+
+            if (Math.floor(time * 60) % 10 === 0) {
+                document.getElementById('ui-instances').innerText = activeCount.toLocaleString();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --------------------------------------------------------
+        // 8. BOOT SEQUENCE & EVENTS
+        // --------------------------------------------------------
+        document.getElementById('btn-start').addEventListener('click', async () => {
+            document.getElementById('btn-start').innerText = "INITIALIZING SENSORS...";
+            try {
+                await startCamera();
+                await initNeuralPose();
+                
+                document.getElementById('ar-boot').style.display = 'none';
+                
+                const hud = document.getElementById('sgx-hud');
+                const guiMenu = document.getElementById('sgx-gui');
+                const btnToggle = document.getElementById('btn-toggle-ui');
+                const btnSwitchCam = document.getElementById('btn-switch-cam');
+                
+                hud.style.display = 'block';
+                guiMenu.style.display = 'block';
+                btnToggle.style.display = 'block';
+                btnSwitchCam.style.display = 'block';
+
+                // Forzar estado de UI apagado desde el inicio
+                hud.style.opacity = '0';
+                guiMenu.style.opacity = '0';
+                guiMenu.style.pointerEvents = 'none';
+                btnSwitchCam.style.opacity = '0';
+                btnSwitchCam.style.pointerEvents = 'none';
+                btnToggle.style.opacity = '0.3'; // Mantener el botón sutil para poder encenderlo
+                
+                updateSystem();
+            } catch (err) {
+                console.error(err);
+                alert("Camera access is required for Skeleton Tracking.");
+                document.getElementById('btn-start').innerText = "ACTIVATE SENSORS";
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            resizePlanes();
+        });
     </script>
 </body>
 </html>
