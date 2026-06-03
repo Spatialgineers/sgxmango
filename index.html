@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SGX Mango Visualizer</title>
+    <title>FESTIVAL DEL MANGO 2026</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -153,12 +153,29 @@
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
         }
 
-        #btn-toggle-ui {
-            bottom: 20px;
+        #btn-switch-cam {
+            bottom: 50px; /* Ajustado para hacer espacio al watermark */
         }
 
-        #btn-switch-cam {
-            bottom: 75px; /* Positioned right above the visibility toggle */
+        /* Watermark UI Toggle */
+        #watermark-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 25px;
+            z-index: 200;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            color: rgba(253, 204, 13, 0.4); /* Oro sutil por defecto */
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            display: none; /* Oculto hasta el inicio */
+        }
+
+        #watermark-toggle:hover {
+            color: #00FFFF; /* Brillo cyan al pasar el cursor */
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
         }
 
         .lil-gui { 
@@ -188,11 +205,13 @@
 
     <!-- Interface Controls -->
     <button id="btn-switch-cam" class="sgx-corner-btn">🔄 CAMBIAR CÁMARA</button>
-    <button id="btn-toggle-ui" class="sgx-corner-btn">👁️ VISIBILIDAD UI</button>
+    
+    <!-- Watermark UI Toggle -->
+    <div id="watermark-toggle">POWERED BY SPATIALGINEERS</div>
 
     <div id="sgx-hud">
-        <h1>SGX MANGO VISUALIZER</h1>
-        <div class="subtitle">FRONTAL ARCADE COLLISION // SPATIALGINEERS</div>
+        <h1>FESTIVAL DEL MANGO '26</h1>
+        <div class="subtitle">URBAN EDITION // SPATIALGINEERS</div>
         <div class="metric">
             <span>ACTIVE_MANGOS</span>
             <span id="ui-instances" class="val-gold">0</span>
@@ -234,6 +253,7 @@
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 0, 40); 
+        scene.add(camera);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -254,6 +274,78 @@
         scene.add(rimLight);
 
         // --------------------------------------------------------
+        // 1.5 MANGO TINT POST-PROCESS SHADER (Camera Attached)
+        // --------------------------------------------------------
+        const mangoShaderMat = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uIntensity: { value: 0.3 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform float uIntensity;
+                varying vec2 vUv;
+
+                // 2D Random
+                float random (in vec2 st) {
+                    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+                }
+
+                // 2D Noise
+                float noise (in vec2 st) {
+                    vec2 i = floor(st);
+                    vec2 f = fract(st);
+                    float a = random(i);
+                    float b = random(i + vec2(1.0, 0.0));
+                    float c = random(i + vec2(0.0, 1.0));
+                    float d = random(i + vec2(1.0, 1.0));
+                    vec2 u = f*f*(3.0-2.0*f);
+                    return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+                }
+
+                void main() {
+                    // Colores del Mango
+                    vec3 green = vec3(0.13, 0.77, 0.36);
+                    vec3 yellow = vec3(0.98, 0.80, 0.08);
+                    vec3 orange = vec3(0.97, 0.45, 0.08);
+
+                    // Ruido y movimiento
+                    float n1 = noise(vec2(vUv.x * 2.0, vUv.y * 5.0 - uTime * 0.4));
+                    float n2 = noise(vec2(vUv.x * 3.0 + uTime * 0.5, vUv.y * 3.0));
+                    
+                    // Gradientes ondulantes
+                    float wave = sin(vUv.x * 10.0 + n1 * 10.0 + uTime) * 0.5 + 0.5;
+                    
+                    vec3 color = mix(green, yellow, wave);
+                    color = mix(color, orange, n2);
+
+                    // Franjas dinámicas estilo "glitch/arte"
+                    float bands = step(0.85, sin(vUv.y * 40.0 + uTime * 5.0 + n1 * 5.0));
+                    color += bands * yellow * 0.4;
+
+                    // Mezcla aditiva para teñir la pantalla
+                    float alpha = uIntensity * (0.4 + wave * 0.3 + n2 * 0.3);
+                    gl_FragColor = vec4(color, alpha);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending, // Crea un tinte luminoso
+            depthTest: false,
+            depthWrite: false
+        });
+
+        const filterPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mangoShaderMat);
+        camera.add(filterPlane);
+        filterPlane.position.z = -1; // Pegado al lente de la cámara
+
+        // --------------------------------------------------------
         // 2. STATE & PARAMETERS (lil-gui)
         // --------------------------------------------------------
         const SGX_PARAMS = {
@@ -263,16 +355,17 @@
             windX: 0.0,
             bounciness: 2.0,
             mangoScale: 1.2,
-            topAssetScale: 10.0, // Escala del nuevo modelo superior
+            topAssetScale: 10.0,
             showSkeleton: false,
             colRadius: 2.5,
-            audioReactive: false
+            audioReactive: false,
+            mangoFilter: 0.3 // Intensidad del efecto Mango
         };
 
         let currentFacingMode = 'user'; // 'user' (Frontal) o 'environment' (Trasera)
         let activeStream = null;
         let poseCameraUtils = null;
-        let poseInstance = null; // AÑADIDO: Preserva la IA globalmente al cambiar de cámara
+        let poseInstance = null; 
 
         const gui = new GUI({ title: 'SGX TELEMETRY // OVERRIDE' });
         gui.domElement.id = 'sgx-gui';
@@ -289,12 +382,13 @@
         pSwarm.add(SGX_PARAMS, 'gravity', 0.005, 0.1).name('Gravity Pull');
         pSwarm.add(SGX_PARAMS, 'mangoScale', 0.1, 3.0).name('Asset Scale');
         
-        const pInteract = gui.addFolder('INTERACTION');
+        const pInteract = gui.addFolder('INTERACTION & VISUALS');
         pInteract.add(SGX_PARAMS, 'bounciness', 0.5, 5.0).name('Bounce Force');
         pInteract.add(SGX_PARAMS, 'colRadius', 1.0, 5.0).name('Hitbox Thickness');
         pInteract.add(SGX_PARAMS, 'topAssetScale', 1.0, 15.0).name('Top Boss Scale').onChange(v => {
             if(topAsset && topAsset.userData) topAsset.userData.baseScale = v;
         });
+        pInteract.add(SGX_PARAMS, 'mangoFilter', 0.0, 1.0).name('Mango Color Tint');
         pInteract.add(SGX_PARAMS, 'showSkeleton').name('Hologram Skeleton');
         pInteract.add(SGX_PARAMS, 'audioReactive').name('Audio Reactivity').onChange(v => {
             document.getElementById('ui-audio').innerText = v ? "ON" : "OFF";
@@ -302,13 +396,13 @@
             if (v) initAudio();
         });
 
-        // Toggle UI Logic
+        // Watermark / Toggle UI Logic
         let uiIsVisible = false;
-        document.getElementById('btn-toggle-ui').addEventListener('click', () => {
+        document.getElementById('watermark-toggle').addEventListener('click', () => {
             uiIsVisible = !uiIsVisible;
             const hud = document.getElementById('sgx-hud');
             const guiMenu = document.getElementById('sgx-gui');
-            const btnToggle = document.getElementById('btn-toggle-ui');
+            const btnToggle = document.getElementById('watermark-toggle');
             const btnSwitchCam = document.getElementById('btn-switch-cam');
             
             if(uiIsVisible) {
@@ -317,14 +411,20 @@
                 guiMenu.style.pointerEvents = 'auto';
                 btnSwitchCam.style.opacity = '1';
                 btnSwitchCam.style.pointerEvents = 'auto';
+                
                 btnToggle.style.opacity = '1';
+                btnToggle.style.color = '#00FFFF';
+                btnToggle.style.textShadow = '0 0 10px rgba(0, 255, 255, 0.8)';
             } else {
                 hud.style.opacity = '0';
                 guiMenu.style.opacity = '0';
                 guiMenu.style.pointerEvents = 'none';
                 btnSwitchCam.style.opacity = '0';
                 btnSwitchCam.style.pointerEvents = 'none';
-                btnToggle.style.opacity = '0.3'; // Mantener sutil para recuperarlo
+                
+                btnToggle.style.opacity = '0.4'; 
+                btnToggle.style.color = ''; // Restore default CSS
+                btnToggle.style.textShadow = '';
             }
         });
 
@@ -402,14 +502,12 @@
                 videoElement.srcObject = stream;
                 activeStream = stream;
 
-                // Actualizar dirección de la textura de Video y Mascara
                 if (videoTexture && maskTexture) {
                     const repeatX = currentFacingMode === 'user' ? -1 : 1;
                     videoTexture.repeat.set(repeatX, 1);
                     maskTexture.repeat.set(repeatX, 1);
                 }
 
-                // Reiniciar el tracker con el nuevo stream
                 if (poseInstance) {
                     poseCameraUtils = new Camera(videoElement, {
                         onFrame: async () => {
@@ -438,7 +536,6 @@
             videoTexture.magFilter = THREE.LinearFilter;
             videoTexture.colorSpace = THREE.SRGBColorSpace;
             videoTexture.center.set(0.5, 0.5);
-            // Default repeat for front camera (user)
             videoTexture.repeat.set(currentFacingMode === 'user' ? -1 : 1, 1); 
 
             maskTexture = new THREE.CanvasTexture(maskCanvas);
@@ -528,14 +625,13 @@
             }
         }
 
-        // Coordinate Mapper - Adapta el eje X dependiendo si usamos cámara frontal o trasera
+        // Coordinate Mapper
         function getMappedCoords(lm) {
             const aspect = window.innerWidth / window.innerHeight;
             const distPerson = camera.position.z; 
             const heightPerson = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distPerson;
             const widthPerson = heightPerson * aspect;
             
-            // Si es cámara frontal (efecto espejo), invertimos el mapa X. Si es trasera, es directo.
             const xDir = currentFacingMode === 'user' ? (0.5 - lm.x) : (lm.x - 0.5);
             const x = xDir * widthPerson;
             const y = -(lm.y - 0.5) * heightPerson;
@@ -555,6 +651,11 @@
             const distBg = camera.position.z - bgPlane.position.z;
             const heightBg = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distBg;
             bgPlane.scale.set(heightBg * aspect, heightBg, 1);
+
+            // Escalar el plano del filtro post-process (Luz de Mango)
+            const distFilter = 1; // Distancia desde la cámara z=-1
+            const heightFilter = 2 * Math.tan((camera.fov * Math.PI / 180) / 2) * distFilter;
+            filterPlane.scale.set(heightFilter * aspect, heightFilter, 1);
         }
 
         // --------------------------------------------------------
@@ -566,7 +667,7 @@
         // 5.1 The Mangos
         const MANGO_URL = 'https://static.wixstatic.com/3d/fe81a7_b9bf8286266642d7b0fd6a664b00f304.glb';
         
-        // 5.2 The Top Asset (Static Wixstatic URL directo)
+        // 5.2 The Top Asset 
         const TOP_ASSET_URL = 'https://static.wixstatic.com/3d/fe81a7_384b03d7b35c4483890f4aff73c94138.glb';
 
         let topAsset = null;
@@ -574,7 +675,6 @@
         loader.load(TOP_ASSET_URL, (gltf) => {
             topAsset = gltf.scene;
             
-            // Centrar pivot point
             const box = new THREE.Box3().setFromObject(topAsset);
             const center = box.getCenter(new THREE.Vector3());
             topAsset.position.sub(center); 
@@ -582,7 +682,7 @@
             const wrapper = new THREE.Group();
             wrapper.add(topAsset);
             
-            wrapper.position.set(0, 12, 4); // En la parte superior de la pantalla interactuable
+            wrapper.position.set(0, 12, 4); 
             
             topAsset.traverse(c => {
                 if(c.isMesh) {
@@ -593,7 +693,6 @@
             
             scene.add(wrapper);
             
-            // Inyectar datos físicos en userData
             topAsset.userData = {
                 wrapper: wrapper,
                 rotSpeedY: 0.01,
@@ -602,9 +701,8 @@
                 targetScale: SGX_PARAMS.topAssetScale
             };
         }, undefined, (error) => {
-            console.warn("Error cargando Asset Superior. Generando holograma SGX de respaldo...", error);
+            console.warn("Wix denegó acceso (403). Generando holograma SGX de respaldo...", error);
             
-            // FALLBACK ARCHITECTURE
             const fallbackGeo = new THREE.OctahedronGeometry(1.5, 0);
             const fallbackMat = new THREE.MeshStandardMaterial({ 
                 color: 0x00FFFF, 
@@ -712,7 +810,7 @@
         });
 
         // --------------------------------------------------------
-        // 7. HIGH-PERFORMANCE RENDER LOOP & 2.5D COLLISIONS
+        // 7. HIGH-PERFORMANCE RENDER LOOP
         // --------------------------------------------------------
         const clock = new THREE.Clock();
 
@@ -722,6 +820,10 @@
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
             const dTime = delta * 60; 
+
+            // Actualizar la intensidad y tiempo del Post-Process (Mango Tint)
+            mangoShaderMat.uniforms.uTime.value = time;
+            mangoShaderMat.uniforms.uIntensity.value = SGX_PARAMS.mangoFilter;
 
             let rawAudio = getAudioPulse();
             currentAudioPulse += (rawAudio - currentAudioPulse) * 0.2;
@@ -776,23 +878,18 @@
                 skeletonLines.visible = false;
             }
 
-            // --- INTERACTION CON TOP ASSET (PACÍFICO Y CENTRADO) ---
+            // --- INTERACTION CON TOP ASSET ---
             if (topAsset && topAsset.userData && topAsset.userData.wrapper) {
                 const wrapper = topAsset.userData.wrapper;
                 
-                // Rotación restringida de lado a lado (aprox 20 grados)
                 wrapper.rotation.y = Math.sin(time * 2.0) * 0.35;
                 wrapper.rotation.x = 0;
                 
-                // Flote natural + Centro absoluto (X=0) + Reactividad de audio en Y
                 wrapper.position.y = 12 + Math.sin(time * 1.5) * 0.8 + (currentAudioPulse * 3);
                 wrapper.position.x = 0; 
 
-                // NO HAY COLISIÓN (Se eliminó la detección de golpes)
-                // El tamaño ahora escala pacíficamente de acuerdo con el audio (Efecto "Pump")
                 topAsset.userData.targetScale = topAsset.userData.baseScale + (currentAudioPulse * 1.5);
 
-                // Interpolar escala
                 wrapper.scale.lerp(new THREE.Vector3(
                     topAsset.userData.targetScale,
                     topAsset.userData.targetScale,
@@ -910,7 +1007,7 @@
                 
                 const hud = document.getElementById('sgx-hud');
                 const guiMenu = document.getElementById('sgx-gui');
-                const btnToggle = document.getElementById('btn-toggle-ui');
+                const btnToggle = document.getElementById('watermark-toggle');
                 const btnSwitchCam = document.getElementById('btn-switch-cam');
                 
                 hud.style.display = 'block';
@@ -924,7 +1021,7 @@
                 guiMenu.style.pointerEvents = 'none';
                 btnSwitchCam.style.opacity = '0';
                 btnSwitchCam.style.pointerEvents = 'none';
-                btnToggle.style.opacity = '0.3'; // Mantener el botón sutil para poder encenderlo
+                btnToggle.style.opacity = '0.4'; 
                 
                 updateSystem();
             } catch (err) {
